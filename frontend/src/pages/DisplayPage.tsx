@@ -18,7 +18,7 @@ export default function DisplayPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0f] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a103c] via-[#0a0a0f] to-[#000000] text-white flex flex-col items-center justify-center p-8">
         <h1 className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 drop-shadow-[0_0_25px_rgba(219,39,119,0.5)] mb-16 tracking-tighter">
-          ĐOÁN TỪ KHÓA ĐỒNG ĐỘI
+          TAM SAO THẤT BẢN
         </h1>
         {gameState && gameState.teams && gameState.teams.length > 0 && (
           <Scoreboard teams={gameState.teams} />
@@ -32,7 +32,7 @@ export default function DisplayPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col items-center p-8 overflow-hidden relative">
       <GameEffects effectData={lastEffect} />
-      
+
       {/* Background ambient glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-64 bg-purple-600/20 blur-[120px] rounded-full pointer-events-none"></div>
 
@@ -48,10 +48,10 @@ export default function DisplayPage() {
       </header>
 
       <main className="flex-1 flex flex-col items-center w-full z-10 max-w-6xl">
-        
+
         {/* Main Display Area based on State */}
         <div className="flex-1 flex flex-col items-center justify-center w-full">
-          
+
           {(state === 'READY' || state === 'PREPARING') && (
             <div className="text-center">
               <h2 className="text-6xl font-black mb-8 text-blue-400 drop-shadow-[0_0_15px_rgba(96,165,250,0.5)]">
@@ -81,7 +81,7 @@ export default function DisplayPage() {
               <div className="text-2xl text-blue-400 font-bold uppercase tracking-widest mb-6">Đồng đội hỗ trợ</div>
               {hint_visible && current_hint_image_url && (
                 <div className="flex justify-center mb-8">
-                   <img src={current_hint_image_url} alt="Hint" className="max-w-full h-[400px] object-contain rounded-xl border-4 border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.4)]" />
+                  <img src={current_hint_image_url} alt="Hint" className="max-w-full h-[400px] object-contain rounded-xl border-4 border-blue-500/50 shadow-[0_0_20px_rgba(59,130,246,0.4)]" />
                 </div>
               )}
               <div className="text-5xl font-black text-white leading-tight">
@@ -98,7 +98,7 @@ export default function DisplayPage() {
               <div className="text-2xl text-red-400 font-bold uppercase tracking-widest mb-4">Gợi ý từ khóa:</div>
               {hint_visible && current_hint_image_url && (
                 <div className="flex justify-center mb-8">
-                   <img src={current_hint_image_url} alt="Hint" className="max-w-full h-[300px] object-contain rounded-xl border-4 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.4)]" />
+                  <img src={current_hint_image_url} alt="Hint" className="max-w-full h-[300px] object-contain rounded-xl border-4 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.4)]" />
                 </div>
               )}
               <div className="text-5xl font-black text-white leading-tight mb-8">
