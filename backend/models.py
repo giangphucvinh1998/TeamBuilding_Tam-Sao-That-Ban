@@ -118,6 +118,34 @@ class WSMessage(BaseModel):
     data: dict = {}
 
 
+# --- Song ---
+
+class SongCreate(BaseModel):
+    title: str
+    media_url: str
+    original_filename: str = ""
+    hint: str = ""
+    is_final_live: bool = False
+
+class SongUpdate(BaseModel):
+    title: Optional[str] = None
+    media_url: Optional[str] = None
+    original_filename: Optional[str] = None
+    hint: Optional[str] = None
+    is_final_live: Optional[bool] = None
+    is_used: Optional[bool] = None
+
+class SongResponse(BaseModel):
+    id: str
+    session_id: str
+    title: str
+    media_url: str
+    original_filename: str
+    hint: str
+    is_used: bool
+    is_final_live: bool
+
+
 # --- Game State Broadcast ---
 
 class TimerInfo(BaseModel):
@@ -128,12 +156,14 @@ class TimerInfo(BaseModel):
 
 class GameStateResponse(BaseModel):
     session_id: Optional[str] = None
+    game_mode: str = "TAM_SAO"  # "TAM_SAO" or "HUMMING"
     state: str
     current_team: Optional[TeamResponse] = None
     current_keyword: Optional[str] = None  # Only for admin
     current_answer: Optional[str] = None   # Only for admin
     current_hint: Optional[str] = None     # Shown after HINT state
     current_hint_image_url: Optional[str] = None # Shown after HINT state
+    current_song: Optional[SongResponse] = None # For Humming mode
     round_number: Optional[int] = None
     timer: Optional[TimerInfo] = None
     teams: list[TeamResponse] = []

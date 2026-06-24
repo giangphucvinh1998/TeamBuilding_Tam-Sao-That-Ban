@@ -8,8 +8,7 @@ import os
 
 from database import init_db
 from websocket_manager import manager
-from routers import auth, sessions, teams, keywords, game
-
+from routers import auth, sessions, teams, keywords, game, songs, humming
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -40,6 +39,8 @@ app.include_router(sessions.router)
 app.include_router(teams.router)
 app.include_router(keywords.router)
 app.include_router(game.router)
+app.include_router(songs.router)
+app.include_router(humming.router)
 
 
 from game_state import game
@@ -50,20 +51,21 @@ import json
 async def websocket_admin(websocket: WebSocket):
     """WebSocket endpoint for admin/MC clients."""
     await manager.connect(websocket, "admin")
-    
-    # Send initial state
-    state_data = await game.get_full_state()
-    await websocket.send_text(json.dumps({
-        "type": "state_update",
-        "data": state_data
-    }, ensure_ascii=False))
-    
     try:
+        # Send initial state
+        state_data = await game.get_full_state()
+        await websocket.send_text(json.dumps({
+            "type": "state_update",
+            "data": state_data
+        }, ensure_ascii=False))
+        
         while True:
             # Keep connection alive, receive any messages from admin
             data = await websocket.receive_text()
             # Can handle admin commands via WebSocket if needed
-    except WebSocketDisconnect:
+    except Exception:
+        pass
+    finally:
         await manager.disconnect(websocket, "admin")
 
 
@@ -71,25 +73,26 @@ async def websocket_admin(websocket: WebSocket):
 async def websocket_display(websocket: WebSocket):
     """WebSocket endpoint for display/stage clients."""
     await manager.connect(websocket, "display")
-    
-    # Send initial state
-    state_data = await game.get_full_state()
-    display_data = {**state_data}
-    display_data.pop("current_keyword", None)
-    display_data.pop("current_answer", None)
-    if not display_data.get("hint_visible", False):
-        display_data.pop("current_hint", None)
-        display_data.pop("current_hint_image_url", None)
-        
-    await websocket.send_text(json.dumps({
-        "type": "state_update",
-        "data": display_data
-    }, ensure_ascii=False))
-    
     try:
+        # Send initial state
+        state_data = await game.get_full_state()
+        display_data = {**state_data}
+        display_data.pop("current_keyword", None)
+        display_data.pop("current_answer", None)
+        if not display_data.get("hint_visible", False):
+            display_data.pop("current_hint", None)
+            display_data.pop("current_hint_image_url", None)
+            
+        await websocket.send_text(json.dumps({
+            "type": "state_update",
+            "data": display_data
+        }, ensure_ascii=False))
+        
         while True:
             data = await websocket.receive_text()
-    except WebSocketDisconnect:
+    except Exception:
+        pass
+    finally:
         await manager.disconnect(websocket, "display")
 
 

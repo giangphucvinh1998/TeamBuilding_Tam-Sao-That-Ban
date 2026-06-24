@@ -51,6 +51,33 @@ CREATE TABLE IF NOT EXISTS rounds (
     started_at TIMESTAMP,
     finished_at TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS songs (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    media_url TEXT NOT NULL,
+    original_filename TEXT DEFAULT '',
+    hint TEXT DEFAULT '',
+    is_used INTEGER NOT NULL DEFAULT 0,
+    is_final_live INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS humming_rounds (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    song_id TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
+    round_number INTEGER NOT NULL,
+    state TEXT NOT NULL DEFAULT 'READY',
+    main_answer_correct INTEGER,
+    hint_answer_correct INTEGER,
+    steal_team_id TEXT REFERENCES teams(id),
+    steal_answer_correct INTEGER,
+    score_awarded INTEGER NOT NULL DEFAULT 0,
+    score_to_team TEXT,
+    started_at TIMESTAMP,
+    finished_at TIMESTAMP
+);
 """
 
 
@@ -72,6 +99,12 @@ async def init_db():
         # Safe migration for hint_image_url
         try:
             await db.execute("ALTER TABLE keywords ADD COLUMN hint_image_url TEXT;")
+        except aiosqlite.OperationalError:
+            pass # Column likely already exists
+            
+        # Safe migration for original_filename in songs
+        try:
+            await db.execute("ALTER TABLE songs ADD COLUMN original_filename TEXT DEFAULT '';")
         except aiosqlite.OperationalError:
             pass # Column likely already exists
             
