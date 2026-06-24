@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useWebSocket } from '@/lib/websocket';
+import { api } from '@/lib/api';
 import SessionManager from '@/components/admin/SessionManager';
 import TeamManager from '@/components/admin/TeamManager';
 import KeywordManager from '@/components/admin/KeywordManager';
@@ -9,6 +11,15 @@ export default function AdminPage() {
   const navigate = useNavigate();
   const [activeSession, setActiveSession] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'control' | 'teams' | 'keywords' | 'settings'>('control');
+  const { gameState } = useWebSocket('admin');
+
+  const toggleIntro = async () => {
+    try {
+      await api.post('/game/toggle-intro', {});
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Simple auth check - just checking if we arrived here, we assume PIN was ok
   // In a real app we'd use a token or context
@@ -32,6 +43,13 @@ export default function AdminPage() {
                 {activeSession.name}
               </div>
             )}
+            <button 
+              onClick={toggleIntro}
+              className={`ml-4 px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition-all border-2 ${gameState?.show_intro ? 'bg-red-50 text-red-600 border-red-500 animate-pulse' : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100'}`}
+              title="Bật/Tắt video Intro toàn màn hình trên máy chiếu"
+            >
+              📺 {gameState?.show_intro ? 'ĐANG PHÁT INTRO' : 'BẬT INTRO'}
+            </button>
           </div>
           
           <nav className="flex gap-1">

@@ -114,3 +114,10 @@ async def end_round():
         return {"message": "Round ended"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/toggle-intro")
+async def toggle_intro():
+    """Toggle the intro video."""
+    await game.toggle_intro()
+    return {"message": "Intro toggled", "show_intro": game.show_intro}

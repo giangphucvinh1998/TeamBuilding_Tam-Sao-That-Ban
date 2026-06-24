@@ -127,7 +127,7 @@ class TimerInfo(BaseModel):
 
 
 class GameStateResponse(BaseModel):
-    session_id: str
+    session_id: Optional[str] = None
     state: str
     current_team: Optional[TeamResponse] = None
     current_keyword: Optional[str] = None  # Only for admin
@@ -139,3 +139,4 @@ class GameStateResponse(BaseModel):
     teams: list[TeamResponse] = []
     hint_visible: bool = False
     steal_active: bool = False
+    show_intro: bool = False

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useWebSocket } from '@/lib/websocket';
 import Timer from '@/components/display/Timer';
 import Scoreboard from '@/components/display/Scoreboard';
@@ -5,6 +6,22 @@ import GameEffects from '@/components/display/GameEffects';
 
 export default function DisplayPage() {
   const { gameState, isConnected, lastEffect } = useWebSocket('display');
+  const videoRef1 = useRef<HTMLVideoElement>(null);
+  const videoRef2 = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (gameState?.show_intro) {
+      if (videoRef1.current) videoRef1.current.play().catch(e => console.warn("Autoplay blocked:", e));
+      if (videoRef2.current) videoRef2.current.play().catch(e => console.warn("Autoplay blocked:", e));
+    }
+  }, [gameState?.show_intro]);
+
+  const handleInteract = () => {
+    if (gameState?.show_intro) {
+      if (videoRef1.current) videoRef1.current.play();
+      if (videoRef2.current) videoRef2.current.play();
+    }
+  };
 
   if (!isConnected) {
     return (
@@ -16,8 +33,11 @@ export default function DisplayPage() {
 
   if (!gameState || gameState.state === 'WAITING' || !gameState.session_id) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a103c] via-[#0a0a0f] to-[#000000] text-white flex flex-col items-center justify-center p-8">
-        <h1 className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 drop-shadow-[0_0_25px_rgba(219,39,119,0.5)] mb-16 tracking-tighter">
+      <div onClick={handleInteract} className="min-h-screen bg-[#0a0a0f] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1a103c] via-[#0a0a0f] to-[#000000] text-white flex flex-col items-center justify-center p-8 cursor-pointer">
+        {gameState?.show_intro && (
+          <video ref={videoRef1} src="/intro.MOV" autoPlay loop playsInline className="fixed inset-0 w-full h-full object-cover z-50 bg-black pointer-events-none" />
+        )}
+        <h1 className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 drop-shadow-[0_0_25px_rgba(219,39,119,0.5)] mb-16 tracking-tighter z-10 relative">
           TAM SAO THẤT BẢN
         </h1>
         {gameState && gameState.teams && gameState.teams.length > 0 && (
@@ -30,7 +50,10 @@ export default function DisplayPage() {
   const { state, current_team, timer, teams, hint_visible, current_hint, current_hint_image_url, round_number } = gameState;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col items-center p-8 overflow-hidden relative">
+    <div onClick={handleInteract} className="min-h-screen bg-[#0a0a0f] text-white flex flex-col items-center p-8 overflow-hidden relative cursor-pointer">
+      {gameState?.show_intro && (
+        <video ref={videoRef2} src="/intro.MOV" autoPlay loop playsInline className="fixed inset-0 w-full h-full object-cover z-50 bg-black pointer-events-none" />
+      )}
       <GameEffects effectData={lastEffect} />
 
       {/* Background ambient glow */}

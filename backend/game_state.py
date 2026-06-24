@@ -22,6 +22,7 @@ class GameStateMachine:
         self.timer_info: Optional[TimerInfo] = None
         self.hint_visible: bool = False
         self.steal_active: bool = False
+        self.show_intro: bool = False
         self._timer_task: Optional[asyncio.Task] = None
 
     async def get_full_state(self) -> dict:
@@ -83,6 +84,7 @@ class GameStateMachine:
                 "teams": [t.model_dump() for t in teams],
                 "hint_visible": self.hint_visible,
                 "steal_active": self.steal_active,
+                "show_intro": self.show_intro,
             }
         finally:
             await db.close()
@@ -91,6 +93,11 @@ class GameStateMachine:
         """Broadcast current state to all clients."""
         state_data = await self.get_full_state()
         await manager.broadcast_state(state_data)
+
+    async def toggle_intro(self):
+        """Toggle the intro video."""
+        self.show_intro = not self.show_intro
+        await self.broadcast_state()
 
     async def set_session(self, session_id: str):
         """Set the active session."""
