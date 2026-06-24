@@ -507,6 +507,24 @@ class GameStateMachine:
 
         await self.broadcast_state()
 
+    async def clear_session(self):
+        """Clear the current session completely."""
+        self.session_id = None
+        self.state = GameState.WAITING
+        self.current_team_id = None
+        self.current_keyword_id = None
+        self.current_round_id = None
+        self.round_number = 0
+        self.timer_info = None
+        self.hint_visible = False
+        self.steal_active = False
+
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
+
+        await self.broadcast_state()
+
 
 # Singleton instance
 game = GameStateMachine()

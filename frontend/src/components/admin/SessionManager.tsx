@@ -45,7 +45,7 @@ export default function SessionManager({ activeSession, setActiveSession }: { ac
     try {
       if (activeSession) {
         await api.post(`/sessions/${activeSession.id}/reset`, {});
-        await api.put(`/sessions/${activeSession.id}/status`, { status: 'COMPLETED' });
+        await api.put(`/sessions/${activeSession.id}/status`, { status: 'CLOSED' });
       }
       setActiveSession(null);
       fetchSession();

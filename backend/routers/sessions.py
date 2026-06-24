@@ -83,6 +83,9 @@ async def update_session_status(session_id: str, request: SessionStatusUpdate):
 
         if request.status.value == "ACTIVE":
             await game.set_session(session_id)
+        else:
+            if game.session_id == session_id:
+                await game.clear_session()
 
         return {"message": "Status updated", "status": request.status.value}
     finally:
@@ -107,6 +110,10 @@ async def delete_session(session_id: str):
         await db.execute("DELETE FROM teams WHERE session_id = ?", (session_id,))
         await db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
         await db.commit()
+
+        if game.session_id == session_id:
+            await game.clear_session()
+
         return {"message": "Session deleted"}
     finally:
         await db.close()
