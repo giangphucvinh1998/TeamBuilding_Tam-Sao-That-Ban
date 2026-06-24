@@ -1,0 +1,40 @@
+# Python / Backend
+backend/__pycache__/
+backend/*.pyc
+backend/venv/
+backend/env/
+backend/.env
+backend/game.db
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+frontend/coverage/
+
+# IDE & Editor
+.vscode/
+.idea/
+.gemini/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Debug scripts
+debug_*.py
