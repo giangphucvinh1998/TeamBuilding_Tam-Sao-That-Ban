@@ -11,12 +11,16 @@ export const api = {
   },
 
   post: async (endpoint: string, body?: any) => {
+    const isFormData = body instanceof FormData;
+    const headers: Record<string, string> = {};
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
+      headers,
+      body: isFormData ? body : (body ? JSON.stringify(body) : undefined),
     });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));

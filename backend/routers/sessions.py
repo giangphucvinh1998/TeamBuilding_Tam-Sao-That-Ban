@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 from database import get_db
 from models import SessionCreate, SessionResponse, SessionStatusUpdate
 from game_state import game
+from humming_game_state import humming_game
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -83,9 +84,12 @@ async def update_session_status(session_id: str, request: SessionStatusUpdate):
 
         if request.status.value == "ACTIVE":
             await game.set_session(session_id)
+            await humming_game.set_session(session_id)
         else:
             if game.session_id == session_id:
                 await game.clear_session()
+            if humming_game.session_id == session_id:
+                await humming_game.clear_session()
 
         return {"message": "Status updated", "status": request.status.value}
     finally:
@@ -96,7 +100,9 @@ async def update_session_status(session_id: str, request: SessionStatusUpdate):
 async def reset_session(session_id: str):
     """Reset session - clear all rounds and scores."""
     game.session_id = session_id
+    humming_game.session_id = session_id
     await game.reset_session()
+    await humming_game.reset_session()
     return {"message": "Session reset"}
 
 
@@ -106,13 +112,17 @@ async def delete_session(session_id: str):
     db = await get_db()
     try:
         await db.execute("DELETE FROM rounds WHERE session_id = ?", (session_id,))
+        await db.execute("DELETE FROM humming_rounds WHERE session_id = ?", (session_id,))
         await db.execute("DELETE FROM keywords WHERE session_id = ?", (session_id,))
+        await db.execute("DELETE FROM songs WHERE session_id = ?", (session_id,))
         await db.execute("DELETE FROM teams WHERE session_id = ?", (session_id,))
         await db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
         await db.commit()
 
         if game.session_id == session_id:
             await game.clear_session()
+        if humming_game.session_id == session_id:
+            await humming_game.clear_session()
 
         return {"message": "Session deleted"}
     finally:

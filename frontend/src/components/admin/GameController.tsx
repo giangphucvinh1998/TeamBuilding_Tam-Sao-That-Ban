@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import { useWebSocket } from '@/lib/websocket';
 
-export default function GameController({ sessionId }: { sessionId: string }) {
-  const { gameState } = useWebSocket('admin');
+export default function GameController({ sessionId, gameState }: { sessionId: string, gameState: any }) {
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [selectedKeywordId, setSelectedKeywordId] = useState('');
   const [keywords, setKeywords] = useState<any[]>([]);

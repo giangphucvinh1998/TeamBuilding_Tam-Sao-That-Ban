@@ -5,12 +5,15 @@ import { api } from '@/lib/api';
 import SessionManager from '@/components/admin/SessionManager';
 import TeamManager from '@/components/admin/TeamManager';
 import KeywordManager from '@/components/admin/KeywordManager';
+import SongManager from '@/components/admin/SongManager';
 import GameController from '@/components/admin/GameController';
+import HummingController from '@/components/admin/HummingController';
 
 export default function AdminPage() {
   const navigate = useNavigate();
   const [activeSession, setActiveSession] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'control' | 'teams' | 'keywords' | 'settings'>('control');
+  const [activeTab, setActiveTab] = useState<'control' | 'teams' | 'keywords' | 'songs' | 'settings'>('control');
+  const [controlMode, setControlMode] = useState<'TAM_SAO' | 'HUMMING'>('TAM_SAO');
   const { gameState } = useWebSocket('admin');
 
   const toggleIntro = async () => {
@@ -69,7 +72,13 @@ export default function AdminPage() {
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'keywords' ? 'bg-purple-600 text-white' : 'hover:bg-gray-100'}`}
               onClick={() => setActiveTab('keywords')}
             >
-              Từ Khóa
+              Từ Khóa (TSTB)
+            </button>
+            <button 
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'songs' ? 'bg-purple-600 text-white' : 'hover:bg-gray-100'}`}
+              onClick={() => setActiveTab('songs')}
+            >
+              Bài Hát (Ngân Nga)
             </button>
             <button 
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'settings' ? 'bg-purple-600 text-white' : 'hover:bg-gray-100'}`}
@@ -98,7 +107,25 @@ export default function AdminPage() {
           {activeTab === 'control' && activeSession && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
-                <GameController sessionId={activeSession?.id} />
+                <div className="bg-white p-2 rounded-lg shadow-sm border mb-4 flex gap-2">
+                  <button 
+                    onClick={() => setControlMode('TAM_SAO')}
+                    className={`flex-1 py-2 font-bold rounded ${controlMode === 'TAM_SAO' ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                  >
+                    TAM SAO THẤT BẢN
+                  </button>
+                  <button 
+                    onClick={() => setControlMode('HUMMING')}
+                    className={`flex-1 py-2 font-bold rounded ${controlMode === 'HUMMING' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                  >
+                    GIAI ĐIỆU NGÂN NGA
+                  </button>
+                </div>
+                {controlMode === 'TAM_SAO' ? (
+                  <GameController sessionId={activeSession?.id} gameState={gameState} />
+                ) : (
+                  <HummingController sessionId={activeSession?.id} gameState={gameState} />
+                )}
               </div>
               <div className="lg:col-span-1 space-y-6">
                  {/* Mini Scoreboard could go here */}
@@ -117,6 +144,10 @@ export default function AdminPage() {
 
           {activeTab === 'keywords' && activeSession && (
             <KeywordManager sessionId={activeSession?.id} />
+          )}
+
+          {activeTab === 'songs' && activeSession && (
+            <SongManager sessionId={activeSession?.id} />
           )}
 
           {activeTab === 'settings' && (
