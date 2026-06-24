@@ -146,6 +146,15 @@ class SongResponse(BaseModel):
     is_final_live: bool
 
 
+# --- Matrix Game ---
+
+class MatrixTimerRequest(BaseModel):
+    minutes: int
+
+class MatrixScoreRequest(BaseModel):
+    team_scores: dict[str, int]
+
+
 # --- Game State Broadcast ---
 
 class TimerInfo(BaseModel):
@@ -167,6 +176,7 @@ class GameStateResponse(BaseModel):
     round_number: Optional[int] = None
     timer: Optional[TimerInfo] = None
     teams: list[TeamResponse] = []
+    matrix: Optional[list[list[str]]] = None
     hint_visible: bool = False
     steal_active: bool = False
     show_intro: bool = False

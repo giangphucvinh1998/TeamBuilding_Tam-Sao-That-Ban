@@ -54,8 +54,8 @@ class HummingGameStateMachine:
                     if row:
                         current_song = SongResponse(
                             id=row["id"], session_id=row["session_id"], title=row["title"],
-                            media_url=row["media_url"], hint=row["hint"],
-                            is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
+                            media_url=row["media_url"], original_filename=row["original_filename"],
+                            hint=row["hint"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
                         )
 
             current_team = None
@@ -301,6 +301,23 @@ class HummingGameStateMachine:
         self.round_number = 0
         await self.broadcast_state()
 
+    async def set_session(self, session_id: str):
+        """Set the active session."""
+        self.session_id = session_id
+        self.state = GameState.WAITING
+        self.current_team_id = None
+        self.current_song_id = None
+        self.current_round_id = None
+        self.round_number = 0
+        self.timer_info = None
+        self.hint_visible = False
+        self.steal_active = False
+        self.is_media_playing = False
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
+        await self.broadcast_state()
+
     async def reset_session(self):
         """Reset all game data for the current session."""
         if not self.session_id:
@@ -327,6 +344,23 @@ class HummingGameStateMachine:
         self.hint_visible = False
         self.steal_active = False
         self.is_media_playing = False
+
+        await self.broadcast_state()
+
+    async def force_cancel(self):
+        """Force cancel the current round and return to WAITING state."""
+        self.state = GameState.WAITING
+        self.current_team_id = None
+        self.current_song_id = None
+        self.current_round_id = None
+        self.timer_info = None
+        self.hint_visible = False
+        self.steal_active = False
+        self.is_media_playing = False
+
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
 
         await self.broadcast_state()
 

@@ -73,6 +73,7 @@ class GameStateMachine:
 
             return {
                 "session_id": self.session_id,
+                "game_mode": "TAM_SAO",
                 "state": self.state.value,
                 "current_team": current_team.model_dump() if current_team else None,
                 "current_keyword": current_keyword,
@@ -511,6 +512,22 @@ class GameStateMachine:
         self.timer_info = None
         self.hint_visible = False
         self.steal_active = False
+
+        await self.broadcast_state()
+
+    async def force_cancel(self):
+        """Force cancel the current round and return to WAITING state."""
+        self.state = GameState.WAITING
+        self.current_team_id = None
+        self.current_keyword_id = None
+        self.current_round_id = None
+        self.timer_info = None
+        self.hint_visible = False
+        self.steal_active = False
+
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
 
         await self.broadcast_state()
 

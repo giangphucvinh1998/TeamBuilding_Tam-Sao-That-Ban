@@ -8,12 +8,13 @@ import KeywordManager from '@/components/admin/KeywordManager';
 import SongManager from '@/components/admin/SongManager';
 import GameController from '@/components/admin/GameController';
 import HummingController from '@/components/admin/HummingController';
+import MatrixController from '@/components/admin/MatrixController';
 
 export default function AdminPage() {
   const navigate = useNavigate();
   const [activeSession, setActiveSession] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'control' | 'teams' | 'keywords' | 'songs' | 'settings'>('control');
-  const [controlMode, setControlMode] = useState<'TAM_SAO' | 'HUMMING'>('TAM_SAO');
+  const [controlMode, setControlMode] = useState<'TAM_SAO' | 'HUMMING' | 'MATRIX'>('TAM_SAO');
   const { gameState } = useWebSocket('admin');
 
   const toggleIntro = async () => {
@@ -120,11 +121,19 @@ export default function AdminPage() {
                   >
                     GIAI ĐIỆU NGÂN NGA
                   </button>
+                  <button 
+                    onClick={() => setControlMode('MATRIX')}
+                    className={`flex-1 py-2 font-bold rounded ${controlMode === 'MATRIX' ? 'bg-green-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                  >
+                    MÒ KIM BỂ CHỮ
+                  </button>
                 </div>
                 {controlMode === 'TAM_SAO' ? (
                   <GameController sessionId={activeSession?.id} gameState={gameState} />
-                ) : (
+                ) : controlMode === 'HUMMING' ? (
                   <HummingController sessionId={activeSession?.id} gameState={gameState} />
+                ) : (
+                  <MatrixController sessionId={activeSession?.id} gameState={gameState} />
                 )}
               </div>
               <div className="lg:col-span-1 space-y-6">

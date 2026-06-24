@@ -71,6 +71,14 @@ export default function GameController({ sessionId, gameState }: { sessionId: st
     return <div className="p-8 text-center text-gray-500">Connecting to game server...</div>;
   }
 
+  if (gameState.game_mode !== 'TAM_SAO' && gameState.state !== 'WAITING') {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border p-6 text-center text-red-500 font-bold">
+        Một trò chơi khác đang diễn ra. Vui lòng kết thúc trò chơi hiện tại trước khi chuyển sang Tam Sao Thất Bản.
+      </div>
+    );
+  }
+
   const { state, current_team, current_keyword, current_answer, current_hint, round_number, teams } = gameState;
 
   return (

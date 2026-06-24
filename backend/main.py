@@ -8,7 +8,7 @@ import os
 
 from database import init_db
 from websocket_manager import manager
-from routers import auth, sessions, teams, keywords, game, songs, humming
+from routers import auth, sessions, teams, keywords, game, songs, humming, matrix
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,58 +41,60 @@ app.include_router(keywords.router)
 app.include_router(game.router)
 app.include_router(songs.router)
 app.include_router(humming.router)
+app.include_router(matrix.router)
 
 
 from game_state import game
-import json
+from humming_game_state import humming_game
+from matrix_game_state import matrix_game
 
 # WebSocket endpoints
 @app.websocket("/ws/admin")
-async def websocket_admin(websocket: WebSocket):
-    """WebSocket endpoint for admin/MC clients."""
+async def websocket_admin_endpoint(websocket: WebSocket):
     await manager.connect(websocket, "admin")
     try:
-        # Send initial state
-        state_data = await game.get_full_state()
-        await websocket.send_text(json.dumps({
-            "type": "state_update",
-            "data": state_data
-        }, ensure_ascii=False))
-        
         while True:
-            # Keep connection alive, receive any messages from admin
-            data = await websocket.receive_text()
-            # Can handle admin commands via WebSocket if needed
-    except Exception:
-        pass
-    finally:
+            # Broadcast the active game's state
+            if game.state != "WAITING":
+                state_data = await game.get_full_state()
+            elif humming_game.state != "WAITING":
+                state_data = await humming_game.get_full_state()
+            elif matrix_game.state != "WAITING":
+                state_data = await matrix_game.get_full_state()
+            else:
+                # Default to main game if all are WAITING
+                state_data = await game.get_full_state()
+                
+            await websocket.send_json({"type": "state_update", "data": state_data})
+            await asyncio.sleep(1) # Send regular updates to keep alive
+    except WebSocketDisconnect:
+        await manager.disconnect(websocket, "admin")
+    except Exception as e:
+        print(f"Admin WebSocket error: {e}")
         await manager.disconnect(websocket, "admin")
 
+import asyncio
 
 @app.websocket("/ws/display")
-async def websocket_display(websocket: WebSocket):
-    """WebSocket endpoint for display/stage clients."""
+async def websocket_display_endpoint(websocket: WebSocket):
     await manager.connect(websocket, "display")
     try:
-        # Send initial state
-        state_data = await game.get_full_state()
-        display_data = {**state_data}
-        display_data.pop("current_keyword", None)
-        display_data.pop("current_answer", None)
-        if not display_data.get("hint_visible", False):
-            display_data.pop("current_hint", None)
-            display_data.pop("current_hint_image_url", None)
-            
-        await websocket.send_text(json.dumps({
-            "type": "state_update",
-            "data": display_data
-        }, ensure_ascii=False))
-        
         while True:
-            data = await websocket.receive_text()
-    except Exception:
-        pass
-    finally:
+            if game.state != "WAITING":
+                state_data = await game.get_full_state()
+            elif humming_game.state != "WAITING":
+                state_data = await humming_game.get_full_state()
+            elif matrix_game.state != "WAITING":
+                state_data = await matrix_game.get_full_state()
+            else:
+                state_data = await game.get_full_state()
+                
+            await websocket.send_json({"type": "state_update", "data": state_data})
+            await asyncio.sleep(1)
+    except WebSocketDisconnect:
+        await manager.disconnect(websocket, "display")
+    except Exception as e:
+        print(f"Display WebSocket error: {e}")
         await manager.disconnect(websocket, "display")
 
 

@@ -4,6 +4,7 @@ import Timer from '@/components/display/Timer';
 import Scoreboard from '@/components/display/Scoreboard';
 import GameEffects from '@/components/display/GameEffects';
 import HummingDisplay from '@/components/display/HummingDisplay';
+import MatrixDisplay from '@/components/display/MatrixDisplay';
 
 export default function DisplayPage() {
   const { gameState, isConnected, lastEffect } = useWebSocket('display');
@@ -62,7 +63,7 @@ export default function DisplayPage() {
 
       <header className="w-full flex justify-between items-center mb-12 z-10">
         <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 tracking-widest uppercase">
-          {gameState?.game_mode === 'HUMMING' ? 'Giai Điệu Ngân Nga' : 'Tam Sao Thất Bản'}
+          {gameState?.game_mode === 'HUMMING' ? 'Giai Điệu Ngân Nga' : gameState?.game_mode === 'MATRIX' ? 'Mò Kim Bể Chữ' : 'Tam Sao Thất Bản'}
         </h1>
         {current_team && (
           <div className="text-2xl font-bold bg-gray-900/80 px-8 py-3 rounded-full border border-gray-700 shadow-lg text-purple-300">
@@ -75,6 +76,8 @@ export default function DisplayPage() {
 
       {gameState?.game_mode === 'HUMMING' ? (
         <HummingDisplay gameState={gameState} effectData={lastEffect} />
+      ) : gameState?.game_mode === 'MATRIX' ? (
+        <MatrixDisplay gameState={gameState} />
       ) : (
         <main className="flex-1 flex flex-col items-center w-full z-10 max-w-6xl">
           {/* Main Display Area based on State */}

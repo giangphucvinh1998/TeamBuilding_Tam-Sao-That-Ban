@@ -98,3 +98,9 @@ async def end_round():
     """End the current round."""
     await humming_game.end_round()
     return {"message": "Round ended"}
+
+@router.post("/force-cancel")
+async def force_cancel():
+    """Force cancel the round and return to WAITING state."""
+    await humming_game.force_cancel()
+    return {"message": "Round cancelled"}

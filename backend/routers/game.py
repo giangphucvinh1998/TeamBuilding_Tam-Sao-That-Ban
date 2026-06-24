@@ -121,3 +121,9 @@ async def toggle_intro():
     """Toggle the intro video."""
     await game.toggle_intro()
     return {"message": "Intro toggled", "show_intro": game.show_intro}
+
+@router.post("/force-cancel")
+async def force_cancel():
+    """Force cancel the round and return to WAITING state."""
+    await game.force_cancel()
+    return {"message": "Round cancelled"}

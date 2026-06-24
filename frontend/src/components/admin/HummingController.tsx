@@ -72,7 +72,14 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
     await api.post('/humming/end-round');
   };
 
-  if (!gameState || gameState.game_mode !== 'HUMMING') return <div>Đang chuyển đổi hệ thống...</div>;
+  if (!gameState) return <div className="p-8 text-center text-gray-500">Connecting to game server...</div>;
+  if (gameState.game_mode !== 'HUMMING' && gameState.state !== 'WAITING') {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border p-6 text-center text-red-500 font-bold">
+        Một trò chơi khác đang diễn ra. Vui lòng kết thúc trò chơi hiện tại trước khi chuyển sang Giai Điệu Ngân Nga.
+      </div>
+    );
+  }
 
   const { state, current_team, current_song, teams, is_media_playing, is_final_live } = gameState;
 
@@ -80,7 +87,21 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
     <div className="p-6 border-2 border-blue-500 rounded-xl bg-card shadow-lg">
       <div className="flex justify-between items-center mb-6 border-b pb-4">
         <h2 className="text-2xl font-black text-blue-700 uppercase">Điều Khiển: Giai Điệu Ngân Nga</h2>
-        <div className="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg">Trạng thái: <span className="text-blue-600">{state}</span></div>
+        <div className="flex items-center gap-4">
+          <div className="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg">Trạng thái: <span className="text-blue-600">{state}</span></div>
+          {state !== 'WAITING' && (
+            <button 
+              onClick={async () => {
+                if (confirm('Bạn có chắc chắn muốn hủy lượt chơi này và quay về màn hình chờ?')) {
+                  await api.post('/humming/force-cancel');
+                }
+              }}
+              className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 font-bold rounded-lg border border-red-300 transition-colors shadow-sm"
+            >
+              ❌ HỦY LƯỢT (RESET)
+            </button>
+          )}
+        </div>
       </div>
 
       {state === 'WAITING' && (
