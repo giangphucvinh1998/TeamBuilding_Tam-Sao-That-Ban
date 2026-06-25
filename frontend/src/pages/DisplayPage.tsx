@@ -6,6 +6,7 @@ import GameEffects from '@/components/display/GameEffects';
 import HummingDisplay from '@/components/display/HummingDisplay';
 import MatrixDisplay from '@/components/display/MatrixDisplay';
 import game1Audio from '@/assets/game1.mp3';
+import backgroundGame1Audio from '@/assets/background-game1.mp3';
 
 const TEAM_COLORS: Record<string, string> = {
   'XANH BIỂN': 'text-blue-400',
@@ -24,6 +25,7 @@ export default function DisplayPage() {
   const videoRef1 = useRef<HTMLVideoElement>(null);
   const videoRef2 = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const backgroundGame1Ref = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     if (gameState?.show_intro) {
@@ -37,6 +39,10 @@ export default function DisplayPage() {
       gameState?.game_mode === 'MATRIX' &&
       ['PHASE_1', 'PHASE_2', 'PHASE_3'].includes(gameState?.state);
 
+    const isMatrixPlaying =
+      gameState?.game_mode === 'MATRIX' &&
+      gameState?.state === 'PLAYING';
+
     if (isMatrixActivePhase) {
       audioRef.current?.play().catch(e => {
         console.warn("Autoplay audio blocked, waiting for interaction:", e);
@@ -45,6 +51,17 @@ export default function DisplayPage() {
       audioRef.current?.pause();
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
+      }
+    }
+
+    if (isMatrixPlaying) {
+      backgroundGame1Ref.current?.play().catch(e => {
+        console.warn("Autoplay playing audio blocked, waiting for interaction:", e);
+      });
+    } else {
+      backgroundGame1Ref.current?.pause();
+      if (backgroundGame1Ref.current) {
+        backgroundGame1Ref.current.currentTime = 0;
       }
     }
   }, [gameState?.game_mode, gameState?.state]);
@@ -59,8 +76,16 @@ export default function DisplayPage() {
       gameState?.game_mode === 'MATRIX' &&
       ['PHASE_1', 'PHASE_2', 'PHASE_3'].includes(gameState?.state);
 
+    const isMatrixPlaying =
+      gameState?.game_mode === 'MATRIX' &&
+      gameState?.state === 'PLAYING';
+
     if (isMatrixActivePhase) {
       audioRef.current?.play().catch(e => console.warn("Interactive play failed:", e));
+    }
+
+    if (isMatrixPlaying) {
+      backgroundGame1Ref.current?.play().catch(e => console.warn("Interactive playing play failed:", e));
     }
   };
 
@@ -96,6 +121,7 @@ export default function DisplayPage() {
           </div>
         )}
         <audio ref={audioRef} src={game1Audio} loop />
+        <audio ref={backgroundGame1Ref} src={backgroundGame1Audio} loop />
         <RulesOverlay show={gameState?.show_rules} gameMode={gameState?.game_mode} />
         <ScoreboardOverlay show={gameState?.show_scoreboard} teams={gameState?.teams} />
       </div>
@@ -111,6 +137,7 @@ export default function DisplayPage() {
       )}
       <GameEffects effectData={lastEffect} />
       <audio ref={audioRef} src={game1Audio} loop />
+      <audio ref={backgroundGame1Ref} src={backgroundGame1Audio} loop />
 
       {/* Background ambient glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-64 bg-purple-600/20 blur-[120px] rounded-full pointer-events-none"></div>

@@ -13,7 +13,7 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
   const reqRef = useRef<number>(0);
 
   useEffect(() => {
-    if (!timer || !['PHASE_1', 'PHASE_2', 'PHASE_3'].includes(state)) {
+    if (!timer || !['PHASE_1', 'PHASE_2', 'PHASE_3', 'PLAYING'].includes(state)) {
       setTimeLeft(0);
       return;
     }
@@ -29,6 +29,8 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
       } else if (state === 'PHASE_2') {
         totalRem = rem + 40;
       } else if (state === 'PHASE_3') {
+        totalRem = rem;
+      } else if (state === 'PLAYING') {
         totalRem = rem;
       }
 
@@ -170,7 +172,7 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[92vw] z-10 relative pt-16">
 
-      {timeLeft > 0 && (
+      {timeLeft > 0 && ['PHASE_1', 'PHASE_2', 'PHASE_3'].includes(state) && (
         <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
           <div className="text-sm font-bold uppercase tracking-widest text-purple-400 mb-1">Thời gian còn lại</div>
           <div className="bg-black/80 px-8 py-2.5 rounded-full border border-purple-500/50 font-mono text-4xl font-black text-yellow-400 shadow-[0_0_20px_rgba(168,85,247,0.4)] backdrop-blur-sm min-w-[150px] text-center">
@@ -180,36 +182,88 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
       )}
 
       {(state === 'PHASE_1' || state === 'PHASE_2' || state === 'PHASE_3' || state === 'FINISHED') && (
-        <div className="bg-white/10 p-3 rounded-xl backdrop-blur shadow-[0_0_50px_rgba(147,51,234,0.3)] w-full">
-          <div className="grid grid-cols-10 gap-1.5">
-            {matrix.map((row: string[], rIdx: number) => (
-              row.map((cell: string, cIdx: number) => {
-                const isVisible = visibleCells[rIdx]?.[cIdx] ?? true;
-                const style = cellStyles[rIdx]?.[cIdx] ?? {};
+        <div className="bg-white/10 p-3 rounded-xl backdrop-blur shadow-[0_0_50px_rgba(147,51,234,0.3)] w-full overflow-x-auto">
+          <div className="grid grid-cols-11 gap-1.5 min-w-[750px]">
+            {/* Top-left corner coordinates indicator */}
+            <div className="w-full h-[6.5vh] border border-transparent"></div>
 
-                return (
-                  <div
-                    key={`${rIdx}-${cIdx}`}
-                    className={`
-                      w-full h-[6.5vh] flex items-center justify-center text-center p-1
-                      bg-gradient-to-br from-indigo-900 to-purple-900 border-2 border-purple-400/50
-                      rounded-lg shadow-inner font-bold text-white text-lg
-                      transition-all duration-300
-                      ${!isVisible ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}
-                    `}
-                    style={{
-                      opacity: style.opacity !== undefined ? style.opacity : (isVisible ? 1 : 0),
-                      transform: style.scale !== undefined ? `scale(${style.scale})` : (isVisible ? 'scale(1)' : 'scale(0.5)'),
-                      backgroundColor: style.bgColor,
-                      backgroundImage: style.bgColor ? 'none' : undefined
-                    }}
-                  >
-                    <span className="drop-shadow-md break-words w-full line-clamp-3">{cell}</span>
-                  </div>
-                );
-              })
+            
+            {/* Column header labels (1 to 10) */}
+            {Array.from({ length: 10 }).map((_, cIdx) => (
+              <div
+                key={`col-hdr-${cIdx}`}
+                className="w-full h-[6.5vh] flex items-center justify-center font-black text-purple-300 text-xl bg-purple-950/40 border-2 border-purple-500/25 rounded-lg shadow-sm"
+              >
+                {cIdx + 1}
+              </div>
+            ))}
+
+            {/* Matrix rows with Row headers */}
+            {matrix.map((row: string[], rIdx: number) => (
+              <div key={`row-group-${rIdx}`} className="contents">
+                {/* Row header label (1 to 10) */}
+                <div
+                  className="w-full h-[6.5vh] flex items-center justify-center font-black text-purple-300 text-xl bg-purple-950/40 border-2 border-purple-500/25 rounded-lg shadow-sm"
+                >
+                  {rIdx + 1}
+                </div>
+
+                {/* Actual grid cells */}
+                {row.map((cell: string, cIdx: number) => {
+                  const isVisible = visibleCells[rIdx]?.[cIdx] ?? true;
+                  const style = cellStyles[rIdx]?.[cIdx] ?? {};
+
+                  return (
+                    <div
+                      key={`${rIdx}-${cIdx}`}
+                      className={`
+                        w-full h-[6.5vh] flex items-center justify-center text-center p-1
+                        bg-gradient-to-br from-indigo-900 to-purple-900 border-2 border-purple-400/50
+                        rounded-lg shadow-inner font-bold text-white text-lg
+                        transition-all duration-300
+                        ${!isVisible ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}
+                      `}
+                      style={{
+                        opacity: style.opacity !== undefined ? style.opacity : (isVisible ? 1 : 0),
+                        transform: style.scale !== undefined ? `scale(${style.scale})` : (isVisible ? 'scale(1)' : 'scale(0.5)'),
+                        backgroundColor: style.bgColor,
+                        backgroundImage: style.bgColor ? 'none' : undefined
+                      }}
+                    >
+                      <span className="drop-shadow-md break-words w-full line-clamp-3">{cell}</span>
+                    </div>
+                  );
+                })}
+              </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {state === 'READY_PLAY' && (
+        <div className="text-center w-full max-w-4xl bg-purple-900/30 border border-purple-500/50 p-12 rounded-3xl backdrop-blur shadow-[0_0_30px_rgba(168,85,247,0.2)]">
+          <h2 className="text-5xl font-black mb-6 text-purple-400 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">
+            MÒ KIM BỂ CHỮ - PHẦN THI TIẾP SỨC
+          </h2>
+          <div className="text-3xl text-gray-300 animate-pulse">Các đội chuẩn bị viết đáp án lên giấy A4</div>
+          <div className="text-xl text-purple-300/80 mt-4">Chờ Ban Tổ Chức bắt đầu tính giờ làm bài (7 phút)</div>
+        </div>
+      )}
+
+      {state === 'PLAYING' && (
+        <div className="text-center w-full max-w-4xl bg-red-900/30 border border-red-500/50 p-12 rounded-3xl backdrop-blur shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+          <h2 className="text-6xl text-red-500 font-black uppercase tracking-widest mb-6 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse">
+            ĐANG LÀM BÀI!
+          </h2>
+          <div className="text-3xl text-white mb-8">Thời gian viết đáp án còn lại</div>
+          {timeLeft > 0 && (
+            <div className="flex justify-center mb-6">
+              <div className="bg-black/80 px-12 py-6 rounded-3xl border-2 border-red-500 font-mono text-7xl font-black text-yellow-400 shadow-[0_0_30px_rgba(239,68,68,0.5)] backdrop-blur-sm min-w-[250px] text-center">
+                {formatTime(timeLeft)}
+              </div>
+            </div>
+          )}
+          <div className="text-xl text-gray-400">Hết thời gian này, các đội phải nộp lại giấy thi ngay lập tức</div>
         </div>
       )}
 
