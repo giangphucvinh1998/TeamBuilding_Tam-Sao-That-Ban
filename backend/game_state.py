@@ -213,6 +213,7 @@ class GameStateMachine:
             self.active_game_mode = "TAM_SAO"
             self.hint_visible = False
             self.steal_active = False
+            self.show_rules = False
             self.timer_info = None
 
             await self.broadcast_state()

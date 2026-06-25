@@ -138,6 +138,7 @@ class MatrixGameStateMachine:
     async def start_phase_1(self):
         self.state = "PHASE_1"
         main_game_state.active_game_mode = "MATRIX"
+        main_game_state.show_rules = False
         duration = 10
         self.timer_info = TimerInfo(start_time=time.time(), duration=duration, type="phase1")
         await self.broadcast_state()

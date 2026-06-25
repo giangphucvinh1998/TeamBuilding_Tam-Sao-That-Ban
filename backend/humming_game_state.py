@@ -150,6 +150,7 @@ class HummingGameStateMachine:
             main_game_state.active_game_mode = "HUMMING"
             self.hint_visible = False
             self.steal_active = False
+            main_game_state.show_rules = False
             self.is_final_live = bool(song["is_final_live"])
             self.is_media_playing = False
             self.timer_info = None
