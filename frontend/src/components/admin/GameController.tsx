@@ -202,7 +202,7 @@ export default function GameController({ sessionId, gameState }: { sessionId: st
             {state === 'READY' && (
               <>
                 <button className="py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xl" onClick={() => triggerAction('start-preparing')}>
-                  Bắt đầu 15s Chuẩn Bị
+                  Bắt đầu 30s Thảo Luận Nhỏ
                 </button>
                 <button className="py-3 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-lg text-lg" onClick={() => triggerAction('start-playing')}>
                   Bỏ qua chuẩn bị - Vô thi luôn!
@@ -212,7 +212,7 @@ export default function GameController({ sessionId, gameState }: { sessionId: st
 
             {state === 'PREPARING' && (
               <div className="text-center py-4 bg-blue-100 text-blue-800 rounded-lg text-xl font-bold animate-pulse">
-                Đang chạy 15s chuẩn bị...
+                Đang chạy 30s thảo luận nhỏ...
               </div>
             )}
 
@@ -238,6 +238,12 @@ export default function GameController({ sessionId, gameState }: { sessionId: st
                     SAI (Cho đội khác cướp)
                   </button>
                 </div>
+                <button
+                  className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-lg transition-transform active:scale-95 shadow-md mt-2"
+                  onClick={() => triggerAction('reveal-answer')}
+                >
+                  🚫 KHÔNG AI ĐOÁN ĐÚNG (HIỆN ĐÁP ÁN)
+                </button>
               </div>
             )}
 
@@ -252,6 +258,12 @@ export default function GameController({ sessionId, gameState }: { sessionId: st
                     SAI (Cho đội khác cướp)
                   </button>
                 </div>
+                <button
+                  className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-lg transition-transform active:scale-95 shadow-md mt-2"
+                  onClick={() => triggerAction('reveal-answer')}
+                >
+                  🚫 KHÔNG AI ĐOÁN ĐÚNG (HIỆN ĐÁP ÁN)
+                </button>
               </div>
             )}
 
@@ -272,6 +284,13 @@ export default function GameController({ sessionId, gameState }: { sessionId: st
                   ))}
                 </div>
                 {teams.length <= 1 && <div className="text-center text-gray-500">Không có đội nào khác để cướp điểm.</div>}
+                
+                <button
+                  className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-lg transition-transform active:scale-95 shadow-md mt-4"
+                  onClick={() => triggerAction('reveal-answer')}
+                >
+                  🚫 KHÔNG AI ĐOÁN ĐÚNG (HIỆN ĐÁP ÁN)
+                </button>
               </div>
             )}
 

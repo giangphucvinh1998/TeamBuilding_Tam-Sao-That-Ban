@@ -77,6 +77,14 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
     await api.post('/humming/end-round');
   };
 
+  const handleRevealAnswer = async () => {
+    try {
+      await api.post('/humming/reveal-answer');
+    } catch (e: any) {
+      alert(e.response?.data?.detail || "Lỗi khi hiện đáp án");
+    }
+  };
+
   if (!gameState) return <div className="p-8 text-center text-gray-500">Connecting to game server...</div>;
 
   const current_team = isCurrentGameActive ? gameState.current_team : null;
@@ -343,6 +351,12 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
                     SAI (0đ)
                   </button>
                 </div>
+                <button
+                  className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-lg transition-transform active:scale-95 shadow-md mt-2"
+                  onClick={handleRevealAnswer}
+                >
+                  🚫 KHÔNG AI ĐOÁN ĐÚNG (HIỆN ĐÁP ÁN)
+                </button>
               </div>
             )}
 
@@ -363,6 +377,13 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
                   ))}
                 </div>
                 {teams?.length <= 1 && <div className="text-center text-gray-500">Không có đội nào khác để cướp điểm.</div>}
+                
+                <button
+                  className="w-full py-4 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg text-lg transition-transform active:scale-95 shadow-md mt-4"
+                  onClick={handleRevealAnswer}
+                >
+                  🚫 KHÔNG AI ĐOÁN ĐÚNG (HIỆN ĐÁP ÁN)
+                </button>
               </div>
             )}
 

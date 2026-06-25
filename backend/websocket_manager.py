@@ -65,10 +65,11 @@ class ConnectionManager:
 
         # Display gets filtered state (no keyword, answer; hint only when visible)
         display_data = {**state_data}
-        display_data.pop("current_keyword", None)
-        display_data.pop("current_answer", None)
-        if not display_data.get("hint_visible", False):
-            display_data.pop("current_hint", None)
+        if display_data.get("state") != "FINISHED":
+            display_data.pop("current_keyword", None)
+            display_data.pop("current_answer", None)
+            if not display_data.get("hint_visible", False):
+                display_data.pop("current_hint", None)
 
         await self.broadcast_to_display({
             "type": "state_update",

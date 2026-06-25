@@ -147,6 +147,7 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
             </div>
           )}
 
+
           {state === 'STEAL' && (
             <div className="w-full bg-red-900/30 border border-red-500/50 p-10 rounded-3xl backdrop-blur shadow-[0_0_30px_rgba(239,68,68,0.2)]">
               <div className="text-6xl text-red-500 font-black uppercase tracking-widest mb-6 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse">

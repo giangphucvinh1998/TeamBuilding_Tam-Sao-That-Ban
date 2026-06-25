@@ -248,9 +248,19 @@ export default function DisplayPage() {
 
             {state === 'FINISHED' && (
               <div className="text-center w-full flex flex-col items-center">
-                <div className="text-6xl font-black mb-8 text-green-400 drop-shadow-[0_0_20px_rgba(74,222,128,0.5)]">
+                <div className="text-6xl font-black mb-6 text-green-400 drop-shadow-[0_0_20px_rgba(74,222,128,0.5)]">
                   KẾT THÚC LƯỢT CHƠI
                 </div>
+                
+                {gameState?.current_keyword && (
+                  <div className="mb-8">
+                    <div className="text-2xl text-gray-400 font-bold uppercase tracking-widest mb-3">Mật mã đáp án:</div>
+                    <div className="text-5xl font-black text-white bg-purple-900/50 px-8 py-4 rounded-2xl border-2 border-purple-400 shadow-[0_0_30px_rgba(168,85,247,0.4)] uppercase tracking-wide inline-block">
+                      {gameState?.current_keyword}
+                    </div>
+                  </div>
+                )}
+
                 {lastEffect?.effect === 'correct' && (
                   <div className="text-4xl text-white font-bold bg-green-600/30 px-8 py-4 rounded-2xl border border-green-500/50 mb-8">
                     +{lastEffect?.points} Điểm cho đội {teams.find((t: any) => t.id === lastEffect?.team_id)?.name}
@@ -287,58 +297,62 @@ function RulesOverlay({ show, gameMode }: RulesOverlayProps) {
       case 'MATRIX':
         return (
           <>
-            <h3 className="text-3xl font-black text-green-400 mb-6 flex items-center justify-center gap-3">
+            <h3 className="text-3xl font-black text-green-400 mb-4 flex items-center justify-center gap-3">
               <span>🎮 GAME 1: MÒ KIM BỂ CHỮ</span>
             </h3>
-            <ul className="space-y-5 text-left text-lg md:text-xl text-gray-100 max-w-2xl mx-auto list-none pl-0">
-              <li className="flex items-start gap-4">
-                <span className="text-2xl mt-0.5 select-none">📵</span>
-                <div>
-                  <strong className="text-green-300">CẤT ĐIỆN THOẠI:</strong> Toàn bộ các đội úp điện thoại xuống bàn. Tuyệt đối không chụp ảnh đề thi!
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="text-2xl mt-0.5 select-none">⏱️</span>
-                <div>
-                  <strong className="text-green-300">SIÊU TỐC GHI NHỚ:</strong> Đề thi (ma trận từ khóa) chỉ hiển thị trên màn hình lớn trong <strong className="text-yellow-400">1 phút 30 giây</strong>. Hãy tập trung cao độ!
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="text-2xl mt-0.5 select-none">🏃‍♂️</span>
-                <div>
-                  <strong className="text-green-300">TIẾP SỨC ĐỒNG ĐỘI:</strong> Điền các từ khóa tìm được vào ma trận 10x10 trống trên <strong className="text-yellow-400">giấy A0</strong> tại sân khấu. Mỗi đội cử <strong className="text-yellow-400">3 đại diện</strong> thi đấu và có thể thay thế người linh hoạt với các thành viên còn lại, miễn là luôn duy trì <strong className="text-yellow-400">đúng 3 thành viên</strong> trên sân khấu.
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="text-2xl mt-0.5 select-none">🏆</span>
-                <div className="w-full">
-                  <strong className="text-green-300">CÁCH TÍNH ĐIỂM:</strong> Điểm số xếp hạng dựa trên số lượng từ khóa tìm được chính xác trên ma trận trống:
-                  <div className="mt-4 grid grid-cols-5 gap-2 text-center text-xs md:text-sm font-bold">
-                    <div className="bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 py-2 px-1 rounded-xl shadow-[0_0_10px_rgba(234,179,8,0.1)]">
-                      🥇 Nhất: 50đ
-                    </div>
-                    <div className="bg-slate-300/20 border border-slate-300/40 text-slate-200 py-2 px-1 rounded-xl shadow-[0_0_10px_rgba(203,213,225,0.1)]">
-                      🥈 Nhì: 40đ
-                    </div>
-                    <div className="bg-amber-600/20 border border-amber-600/40 text-amber-300 py-2 px-1 rounded-xl shadow-[0_0_10px_rgba(217,119,6,0.1)]">
-                      🥉 Ba: 30đ
-                    </div>
-                    <div className="bg-blue-500/20 border border-blue-500/40 text-blue-300 py-2 px-1 rounded-xl">
-                      🏅 Tư: 20đ
-                    </div>
-                    <div className="bg-gray-600/20 border border-gray-500/40 text-gray-400 py-2 px-1 rounded-xl">
-                      🎗️ Năm: 10đ
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left text-base md:text-lg text-gray-100 max-w-5xl mx-auto">
+              <ul className="space-y-4 list-none pl-0">
+                <li className="flex items-start gap-4">
+                  <span className="text-2xl mt-0.5 select-none">📵</span>
+                  <div>
+                    <strong className="text-green-300">CẤT ĐIỆN THOẠI:</strong> Toàn bộ các đội úp điện thoại xuống bàn. Tuyệt đối không chụp ảnh đề thi!
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <span className="text-2xl mt-0.5 select-none">⏱️</span>
+                  <div>
+                    <strong className="text-green-300">SIÊU TỐC GHI NHỚ:</strong> Đề thi (ma trận từ khóa) chỉ hiển thị trên màn hình lớn trong <strong className="text-yellow-400">1 phút 30 giây</strong>. Hãy tập trung cao độ!
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <span className="text-2xl mt-0.5 select-none">🏃‍♂️</span>
+                  <div>
+                    <strong className="text-green-300">TIẾP SỨC ĐỒNG ĐỘI:</strong> Điền các từ khóa tìm được vào ma trận 10x10 trống trên <strong className="text-yellow-400">giấy A0</strong> tại sân khấu. Mỗi đội cử <strong className="text-yellow-400">3 đại diện</strong> thi đấu và có thể thay thế người linh hoạt với các thành viên còn lại, miễn là luôn duy trì <strong className="text-yellow-400">đúng 3 thành viên</strong> trên sân khấu.
+                  </div>
+                </li>
+              </ul>
+              <ul className="space-y-4 list-none pl-0">
+                <li className="flex items-start gap-4">
+                  <span className="text-2xl mt-0.5 select-none">🏆</span>
+                  <div className="w-full">
+                    <strong className="text-green-300">CÁCH TÍNH ĐIỂM:</strong> Điểm số xếp hạng dựa trên số lượng từ khóa tìm được chính xác trên ma trận trống:
+                    <div className="mt-4 grid grid-cols-2 gap-2 text-center text-xs md:text-sm font-bold">
+                      <div className="bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 py-2 px-1 rounded-xl shadow-[0_0_10px_rgba(234,179,8,0.1)]">
+                        🥇 Nhất: 50đ
+                      </div>
+                      <div className="bg-slate-300/20 border border-slate-300/40 text-slate-200 py-2 px-1 rounded-xl shadow-[0_0_10px_rgba(203,213,225,0.1)]">
+                        🥈 Nhì: 40đ
+                      </div>
+                      <div className="bg-amber-600/20 border border-amber-600/40 text-amber-300 py-2 px-1 rounded-xl shadow-[0_0_10px_rgba(217,119,6,0.1)]">
+                        🥉 Ba: 30đ
+                      </div>
+                      <div className="bg-blue-500/20 border border-blue-500/40 text-blue-300 py-2 px-1 rounded-xl">
+                        🏅 Tư: 20đ
+                      </div>
+                      <div className="bg-gray-600/20 border border-gray-500/40 text-gray-400 py-2 px-1 rounded-xl col-span-2">
+                        🎗️ Năm: 10đ
+                      </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            </ul>
+                </li>
+              </ul>
+            </div>
           </>
         );
       case 'HUMMING':
         return (
           <>
-            <h3 className="text-3xl font-black text-blue-400 mb-6 flex items-center justify-center gap-3">
+            <h3 className="text-3xl font-black text-blue-400 mb-4 flex items-center justify-center gap-3">
               <span>🎵 GAME 2: GIAI ĐIỆU VƯỢT NGÀN</span>
             </h3>
             <ul className="space-y-4 text-left text-lg md:text-xl text-gray-100 max-w-2xl mx-auto list-none pl-0">
@@ -388,59 +402,63 @@ function RulesOverlay({ show, gameMode }: RulesOverlayProps) {
       default:
         return (
           <>
-            <h3 className="text-3xl font-black text-purple-400 mb-6 flex items-center justify-center gap-3">
+            <h3 className="text-3xl font-black text-purple-400 mb-4 flex items-center justify-center gap-3">
               <span>🤫 GAME 3: MẬT MÃ LẶNG THINH</span>
             </h3>
-            <ul className="space-y-5 text-left text-lg md:text-xl text-gray-100 max-w-2xl mx-auto list-none pl-0">
-              <li className="flex items-start gap-4">
-                <span className="text-2xl mt-0.5 select-none">👥</span>
-                <div>
-                  <strong className="text-purple-300">ĐỘI HÌNH THI ĐẤU:</strong> Cử 4 thành viên lên sân khấu. MC đưa ra gợi ý trước (số lượng từ, chủ đề) trước khi bắt đầu.
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="text-2xl mt-0.5 select-none">⏱️</span>
-                <div>
-                  <strong className="text-purple-300">THẢO LUẬN NHỎ (30S):</strong> 3 thành viên nhận mật mã và có 30 giây để thảo luận nhỏ.
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="text-2xl mt-0.5 select-none">🚫</span>
-                <div>
-                  <strong className="text-purple-300">DIỄN TẢ ĐỒNG ĐỘI (1 PHÚT):</strong> Có 1 phút để 3 thành viên diễn tả bằng cử chỉ/body language cho thành viên cuối cùng (không nói, không khẩu hình, không viết chữ).
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="text-2xl mt-0.5 select-none">🗣️</span>
-                <div>
-                  <strong className="text-purple-300">ĐƯA RA ĐÁP ÁN (10S):</strong> Thành viên đoán có đúng 10 giây để trả lời. Người đoán sẽ xoay vòng qua 4 câu hỏi - tương ứng 4 thành viên.
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="text-2xl mt-0.5 select-none">🏆</span>
-                <div>
-                  <strong className="text-purple-300">CÁCH TÍNH ĐIỂM & CƯỚP ĐIỂM:</strong> Trả lời đúng nhận <strong className="text-green-400">10 điểm</strong>. Nếu sai, các đội khác có quyền cướp điểm: đúng được <strong className="text-green-400">+10 điểm</strong>, sai bị trừ <strong className="text-red-400">-5 điểm</strong>.
-                </div>
-              </li>
-            </ul>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-left text-base md:text-lg text-gray-100 max-w-5xl mx-auto">
+              <ul className="space-y-4 list-none pl-0">
+                <li className="flex items-start gap-4">
+                  <span className="text-2xl mt-0.5 select-none">👥</span>
+                  <div>
+                    <strong className="text-purple-300">ĐỘI HÌNH THI ĐẤU:</strong> Cử 4 thành viên lên sân khấu. MC đưa ra gợi ý trước (số lượng từ, chủ đề) trước khi bắt đầu.
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <span className="text-2xl mt-0.5 select-none">⏱️</span>
+                  <div>
+                    <strong className="text-purple-300">THẢO LUẬN NHỎ (30S):</strong> 3 thành viên nhận mật mã và có 30 giây để thảo luận nhỏ.
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <span className="text-2xl mt-0.5 select-none">🚫</span>
+                  <div>
+                    <strong className="text-purple-300">DIỄN TẢ ĐỒNG ĐỘI (30S):</strong> Có 30 giây để 3 thành viên diễn tả bằng cử chỉ/body language cho thành viên cuối cùng (không nói, không khẩu hình, không viết chữ).
+                  </div>
+                </li>
+              </ul>
+              <ul className="space-y-4 list-none pl-0">
+                <li className="flex items-start gap-4">
+                  <span className="text-2xl mt-0.5 select-none">🗣️</span>
+                  <div>
+                    <strong className="text-purple-300">ĐƯA RA ĐÁP ÁN (10S):</strong> Thành viên đoán có đúng 10 giây để trả lời. Người đoán sẽ xoay vòng qua 4 câu hỏi - tương ứng 4 thành viên.
+                  </div>
+                </li>
+                <li className="flex items-start gap-4">
+                  <span className="text-2xl mt-0.5 select-none">🏆</span>
+                  <div>
+                    <strong className="text-purple-300">CÁCH TÍNH ĐIỂM & CƯỚP ĐIỂM:</strong> Trả lời đúng nhận <strong className="text-green-400">10 điểm</strong>. Nếu sai, các đội khác có quyền cướp điểm: đúng được <strong className="text-green-400">+10 điểm</strong>, sai bị trừ <strong className="text-red-400">-5 điểm</strong>.
+                  </div>
+                </li>
+              </ul>
+            </div>
           </>
         );
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#06060a]/95 backdrop-blur-xl flex items-center justify-center p-6 transition-all duration-300">
-      <div className="bg-gradient-to-br from-gray-950 via-[#120826] to-gray-950 border-2 border-purple-500/40 p-8 md:p-12 rounded-3xl max-w-4xl w-full shadow-[0_0_80px_rgba(168,85,247,0.35)] relative overflow-hidden text-center">
+    <div className="fixed inset-0 z-50 bg-[#06060a]/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-6 transition-all duration-300">
+      <div className="bg-gradient-to-br from-gray-950 via-[#120826] to-gray-950 border-2 border-purple-500/40 p-6 md:p-8 rounded-3xl max-w-6xl w-full shadow-[0_0_80px_rgba(168,85,247,0.35)] relative overflow-hidden text-center">
         {/* Ambient neon decorative circles */}
         <div className="absolute -top-32 -left-32 w-64 h-64 bg-purple-600/20 blur-[100px] rounded-full pointer-events-none"></div>
         <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-pink-600/20 blur-[100px] rounded-full pointer-events-none"></div>
 
         <div className="text-xs uppercase tracking-widest text-purple-400 font-bold mb-2">TEAM BUILDING 2026</div>
-        <h2 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 mb-8 uppercase tracking-tight">
+        <h2 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 mb-4 uppercase tracking-tight">
           LUẬT CHƠI CHI TIẾT
         </h2>
 
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 md:p-8 backdrop-blur-md shadow-inner mb-6 max-h-[60vh] overflow-y-auto">
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 md:p-6 backdrop-blur-md shadow-inner mb-4 overflow-visible">
           {getRulesContent()}
         </div>
 

@@ -194,6 +194,14 @@ class HummingGameStateMachine:
         except asyncio.CancelledError:
             pass
 
+    async def _hint_timer_callback(self, duration: int):
+        try:
+            await asyncio.sleep(duration)
+            self.timer_info = None
+            await self.broadcast_state()
+        except asyncio.CancelledError:
+            pass
+
     async def time_up(self):
         if self.state == GameState.PLAYING:
             # Media finished playing (30s). Auto transition to THINKING (20s)
@@ -309,6 +317,11 @@ class HummingGameStateMachine:
             self._timer_task.cancel()
             self._timer_task = None
 
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
+        self.timer_info = None
+
         db = await get_db()
         try:
             if correct:
@@ -367,6 +380,32 @@ class HummingGameStateMachine:
                 self.steal_active = False
                 await self.broadcast_state()
                 await manager.broadcast_effect("wrong")
+        finally:
+            await db.close()
+
+    async def reveal_answer(self):
+        """Reveal the correct song answer when no one guessed correctly. Transition to FINISHED state."""
+        if self.state not in (GameState.ANSWER_CONFIRM, GameState.HINT, GameState.STEAL):
+            raise ValueError(f"Cannot reveal answer in state {self.state}")
+
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
+        self.timer_info = None
+
+        db = await get_db()
+        try:
+            await db.execute(
+                "UPDATE humming_rounds SET state = ?, score_awarded = 0, score_to_team = NULL, finished_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (GameState.FINISHED.value, self.current_round_id)
+            )
+            await db.commit()
+
+            self.state = GameState.FINISHED
+            self.steal_active = False
+            self.is_media_playing = False
+            await self.broadcast_state()
+            await manager.broadcast_effect("wrong")
         finally:
             await db.close()
 
