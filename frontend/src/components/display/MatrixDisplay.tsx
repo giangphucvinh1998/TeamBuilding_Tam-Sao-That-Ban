@@ -245,7 +245,7 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
           <h2 className="text-5xl font-black mb-6 text-purple-400 drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">
             MÒ KIM BỂ CHỮ - PHẦN THI TIẾP SỨC
           </h2>
-          <div className="text-3xl text-gray-300 animate-pulse">Các đội chuẩn bị viết đáp án lên giấy A4</div>
+          <div className="text-3xl text-gray-300 animate-pulse">Các đội chuẩn bị viết đáp án lên giấy A0</div>
           <div className="text-xl text-purple-300/80 mt-4">Chờ Ban Tổ Chức bắt đầu tính giờ làm bài (7 phút)</div>
         </div>
       )}

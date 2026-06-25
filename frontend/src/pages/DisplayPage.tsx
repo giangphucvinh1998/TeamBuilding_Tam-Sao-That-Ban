@@ -285,7 +285,7 @@ function RulesOverlay({ show, gameMode }: RulesOverlayProps) {
               <li className="flex items-start gap-4">
                 <span className="text-2xl mt-0.5 select-none">🏃‍♂️</span>
                 <div>
-                  <strong className="text-green-300">TIẾP SỨC ĐỒNG ĐỘI:</strong> Mỗi đội cử <strong className="text-yellow-400">3 đại diện</strong> tiếp sức lên điền các từ khóa tìm được vào ma trận 10x10 trống trên giấy A4 tại sân khấu.
+                  <strong className="text-green-300">TIẾP SỨC ĐỒNG ĐỘI:</strong> Điền các từ khóa tìm được vào ma trận 10x10 trống trên <strong className="text-yellow-400">giấy A0</strong> tại sân khấu. Mỗi đội cử <strong className="text-yellow-400">3 đại diện</strong> thi đấu và có thể thay thế người linh hoạt với các thành viên còn lại, miễn là luôn duy trì <strong className="text-yellow-400">đúng 3 thành viên</strong> trên sân khấu.
                 </div>
               </li>
               <li className="flex items-start gap-4">
