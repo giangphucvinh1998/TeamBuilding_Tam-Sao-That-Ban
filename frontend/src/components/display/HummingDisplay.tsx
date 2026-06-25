@@ -35,7 +35,7 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
   if (state === 'WAITING') {
     return (
       <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10">
-        <h2 className="text-6xl font-black mb-16 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] tracking-widest">
+        <h2 className="text-6xl font-black py-2 mb-16 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] tracking-widest">
           GIAI ĐIỆU VƯỢT NGÀN
         </h2>
         {teams && teams.length > 0 && <Scoreboard teams={teams} />}
@@ -136,7 +136,7 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
 
           {state === 'HOPE_STAR' && (
             <div className="w-full bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-purple-500/50 p-10 rounded-3xl backdrop-blur shadow-[0_0_45px_rgba(168,85,247,0.3)] animate-pulse">
-              <div className="text-5xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-500 font-black uppercase tracking-widest mb-6 drop-shadow-[0_0_20px_rgba(168,85,247,0.7)] animate-bounce">
+              <div className="text-5xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-500 font-black uppercase tracking-widest py-2 mb-6 drop-shadow-[0_0_20px_rgba(168,85,247,0.7)] animate-bounce">
                 🌟 NGÔI SAO HY VỌNG 🌟
               </div>
               <div className="text-xl text-purple-300 font-bold uppercase tracking-widest mb-3">Gợi ý từ Lãnh đạo (Tên Ca sĩ):</div>

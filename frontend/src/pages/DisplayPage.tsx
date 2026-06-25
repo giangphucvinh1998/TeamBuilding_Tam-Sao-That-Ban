@@ -454,7 +454,7 @@ function RulesOverlay({ show, gameMode }: RulesOverlayProps) {
         <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-pink-600/20 blur-[100px] rounded-full pointer-events-none"></div>
 
         <div className="text-xs uppercase tracking-widest text-purple-400 font-bold mb-2">TEAM BUILDING 2026</div>
-        <h2 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 mb-4 uppercase tracking-tight">
+        <h2 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 py-2 mb-4 uppercase tracking-tight">
           LUẬT CHƠI CHI TIẾT
         </h2>
 
@@ -486,7 +486,7 @@ function ScoreboardOverlay({ show, teams }: ScoreboardOverlayProps) {
         <div className="absolute -bottom-32 -right-32 w-64 h-64 bg-pink-600/20 blur-[100px] rounded-full pointer-events-none"></div>
         
         <div className="text-xs uppercase tracking-widest text-purple-400 font-bold mb-2">GALA TEAM BUILDING 2026</div>
-        <h2 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 mb-8 uppercase tracking-tight">
+        <h2 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-red-400 py-2 mb-8 uppercase tracking-tight">
           BẢNG ĐIỂM TỔNG SẮP
         </h2>
         

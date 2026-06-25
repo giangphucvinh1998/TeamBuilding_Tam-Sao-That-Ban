@@ -67,7 +67,7 @@ export default function Scoreboard({ teams, currentTeamId }: { teams: any[], cur
 
   return (
     <div className="w-full max-w-4xl mt-12 bg-gray-900/50 backdrop-blur-md rounded-2xl border border-gray-800 p-8 shadow-2xl">
-      <h2 className="text-3xl font-black text-center uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-8">
+      <h2 className="text-3xl font-black text-center uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 py-2 mb-8">
         BẢNG XẾP HẠNG
       </h2>
       
