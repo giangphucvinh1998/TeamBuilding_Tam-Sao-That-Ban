@@ -106,6 +106,16 @@ async def steal(request: StealRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/reveal-answer")
+async def reveal_answer():
+    """Reveal the answer (no correct guesses)."""
+    try:
+        await game.reveal_answer()
+        return {"status": "ok"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.post("/end-round")
 async def end_round():
     """End the current round."""

@@ -168,7 +168,7 @@ class HummingGameStateMachine:
     async def start_playing(self):
         """Start the guessing timer."""
         self.state = GameState.PLAYING
-        self.timer_info = TimerInfo(start_time=time.time(), duration=60, type="playing")
+        self.timer_info = TimerInfo(start_time=time.time(), duration=15, type="playing")
         
         db = await get_db()
         try:
@@ -181,7 +181,7 @@ class HummingGameStateMachine:
 
         if self._timer_task:
             self._timer_task.cancel()
-        self._timer_task = asyncio.create_task(self._play_timer_callback(60))
+        self._timer_task = asyncio.create_task(self._play_timer_callback(15))
 
     async def _play_timer_callback(self, duration: int):
         try:
@@ -190,9 +190,20 @@ class HummingGameStateMachine:
         except asyncio.CancelledError:
             pass
 
+    async def _hint_timer_callback(self, duration: int):
+        try:
+            await asyncio.sleep(duration)
+            self.timer_info = None
+            await self.broadcast_state()
+        except asyncio.CancelledError:
+            pass
+
     async def time_up(self):
         if self.state != GameState.PLAYING:
             return
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
         self.state = GameState.ANSWER_CONFIRM
         self.timer_info = None
         self.is_media_playing = False
@@ -234,6 +245,10 @@ class HummingGameStateMachine:
                     # Normal song: show hint
                     self.state = GameState.HINT
                     self.hint_visible = True
+                    self.timer_info = TimerInfo(start_time=time.time(), duration=10, type="guessing")
+                    if self._timer_task:
+                        self._timer_task.cancel()
+                    self._timer_task = asyncio.create_task(self._hint_timer_callback(10))
                     await db.execute("UPDATE humming_rounds SET state = ? WHERE id = ?", (GameState.HINT.value, self.current_round_id))
                     await db.commit()
                     await self.broadcast_state()
@@ -245,6 +260,11 @@ class HummingGameStateMachine:
     async def hint_answer(self, correct: bool):
         if self.state != GameState.HINT:
             raise ValueError("Not in hint state")
+
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
+        self.timer_info = None
 
         db = await get_db()
         try:
@@ -274,6 +294,10 @@ class HummingGameStateMachine:
         """Skip hint without answering (no points deducted), go straight to steal."""
         if self.state != GameState.HINT:
             raise ValueError("Not in hint state")
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
+        self.timer_info = None
         self.state = GameState.STEAL
         self.steal_active = True
         db = await get_db()
@@ -309,6 +333,32 @@ class HummingGameStateMachine:
                 self.steal_active = False
                 await self.broadcast_state()
                 await manager.broadcast_effect("wrong")
+        finally:
+            await db.close()
+
+    async def reveal_answer(self):
+        """Reveal the correct song answer when no one guessed correctly. Transition to FINISHED state."""
+        if self.state not in (GameState.ANSWER_CONFIRM, GameState.HINT, GameState.STEAL):
+            raise ValueError(f"Cannot reveal answer in state {self.state}")
+
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
+        self.timer_info = None
+
+        db = await get_db()
+        try:
+            await db.execute(
+                "UPDATE humming_rounds SET state = ?, score_awarded = 0, score_to_team = NULL, finished_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (GameState.FINISHED.value, self.current_round_id)
+            )
+            await db.commit()
+
+            self.state = GameState.FINISHED
+            self.steal_active = False
+            self.is_media_playing = False
+            await self.broadcast_state()
+            await manager.broadcast_effect("wrong")
         finally:
             await db.close()
 

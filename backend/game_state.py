@@ -259,11 +259,11 @@ class GameStateMachine:
             pass
 
     async def start_playing(self):
-        """Start the contest timer (60 seconds)."""
+        """Start the contest timer (30 seconds)."""
         if self.state not in (GameState.PREPARING, GameState.READY):
             raise ValueError(f"Cannot start playing in state {self.state}")
 
-        duration = 60
+        duration = 30
 
         self.state = GameState.PLAYING
         self.timer_info = TimerInfo(
@@ -462,6 +462,31 @@ class GameStateMachine:
                 await self.broadcast_state()
                 await manager.broadcast_effect("wrong_deduct", {"points": 5, "team_id": steal_team_id})
                 return {"correct": False, "points": -5, "team_id": steal_team_id}
+        finally:
+            await db.close()
+
+    async def reveal_answer(self):
+        """Reveal answer when no one guessed correctly. Set state to FINISHED without points."""
+        if self.state not in (GameState.ANSWER_CONFIRM, GameState.HINT, GameState.STEAL):
+            raise ValueError(f"Cannot reveal answer in state {self.state}")
+
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
+        self.timer_info = None
+
+        db = await get_db()
+        try:
+            await db.execute(
+                "UPDATE rounds SET state = ?, score_awarded = 0, score_to_team = NULL, finished_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (GameState.FINISHED.value, self.current_round_id)
+            )
+            await db.commit()
+
+            self.state = GameState.FINISHED
+            self.steal_active = False
+            await self.broadcast_state()
+            await manager.broadcast_effect("wrong")
         finally:
             await db.close()
 

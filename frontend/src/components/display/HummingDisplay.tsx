@@ -111,11 +111,14 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
           )}
 
           {state === 'HINT' && (
-            <div className="w-full bg-blue-900/30 border border-blue-500/50 p-10 rounded-3xl backdrop-blur shadow-[0_0_30px_rgba(59,130,246,0.2)]">
-              <div className="text-2xl text-blue-400 font-bold uppercase tracking-widest mb-6">Gợi ý bài hát</div>
-              <div className="text-4xl font-black text-white leading-tight">
-                {current_song?.hint || '(Không có gợi ý)'}
+            <div className="w-full flex flex-col items-center">
+              <div className="w-full bg-blue-900/30 border border-blue-500/50 p-10 rounded-3xl backdrop-blur shadow-[0_0_30px_rgba(59,130,246,0.2)] mb-6">
+                <div className="text-2xl text-blue-400 font-bold uppercase tracking-widest mb-6">Gợi ý bài hát</div>
+                <div className="text-4xl font-black text-white leading-tight">
+                  {current_song?.hint || '(Không có gợi ý)'}
+                </div>
               </div>
+              {timer && <Timer timerInfo={timer} />}
             </div>
           )}
 
