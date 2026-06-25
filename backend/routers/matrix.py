@@ -26,6 +26,12 @@ async def start_answer_time(request: MatrixTimerRequest):
     await matrix_game.start_answer_timer(request.minutes)
     return {"status": "ok"}
 
+@router.post("/end-timer")
+async def end_timer():
+    await matrix_game.transition_to_scoring()
+    return {"status": "ok"}
+
+
 @router.post("/score")
 async def score_teams(request: MatrixScoreRequest):
     await matrix_game.award_scores(request.team_scores)

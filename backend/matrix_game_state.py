@@ -168,11 +168,31 @@ class MatrixGameStateMachine:
         self._timer_task = asyncio.create_task(self._timer_callback(duration, self.end_phases))
 
     async def end_phases(self):
+        self.state = "READY_PLAY" # Waiting screen for teams to prepare
+        self.timer_info = None
+        if self._timer_task:
+            self._timer_task.cancel()
+            self._timer_task = None
+        await self.broadcast_state()
+
+    async def start_answer_timer(self, minutes: int):
+        self.state = "PLAYING"
+        duration = minutes * 60
+        self.timer_info = TimerInfo(start_time=time.time(), duration=duration, type="answer_countdown")
+        await self.broadcast_state()
+
+        if self._timer_task:
+            self._timer_task.cancel()
+        self._timer_task = asyncio.create_task(self._timer_callback(duration, self.transition_to_scoring))
+
+    async def transition_to_scoring(self):
         self.state = "SCORING" # Waiting for BTC to calculate results
         self.timer_info = None
         if self._timer_task:
             self._timer_task.cancel()
+            self._timer_task = None
         await self.broadcast_state()
+
 
 
 

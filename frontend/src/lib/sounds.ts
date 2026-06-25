@@ -1,5 +1,17 @@
+import correctSound from '@/assets/correct.mp3';
+import incorrectSound from '@/assets/incorrect.mp3';
+
 class SoundManager {
   private audioCtx: AudioContext | null = null;
+  private correctAudio: HTMLAudioElement | null = null;
+  private incorrectAudio: HTMLAudioElement | null = null;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      this.correctAudio = new Audio(correctSound);
+      this.incorrectAudio = new Audio(incorrectSound);
+    }
+  }
   
   private init() {
     if (!this.audioCtx) {
@@ -57,6 +69,18 @@ class SoundManager {
 
   // Happy sound for correct answer
   playCorrect() {
+    if (this.correctAudio) {
+      this.correctAudio.currentTime = 0;
+      this.correctAudio.play().catch(e => {
+        console.warn("Autoplay blocked/failed for correct audio, falling back:", e);
+        this.playCorrectSynth();
+      });
+    } else {
+      this.playCorrectSynth();
+    }
+  }
+
+  private playCorrectSynth() {
     try {
       this.init();
       if (!this.audioCtx) return;
@@ -81,6 +105,18 @@ class SoundManager {
 
   // Sad sound for wrong answer
   playWrong() {
+    if (this.incorrectAudio) {
+      this.incorrectAudio.currentTime = 0;
+      this.incorrectAudio.play().catch(e => {
+        console.warn("Autoplay blocked/failed for incorrect audio, falling back:", e);
+        this.playWrongSynth();
+      });
+    } else {
+      this.playWrongSynth();
+    }
+  }
+
+  private playWrongSynth() {
     try {
       this.init();
       if (!this.audioCtx) return;
@@ -104,3 +140,4 @@ class SoundManager {
 }
 
 export const sounds = new SoundManager();
+
