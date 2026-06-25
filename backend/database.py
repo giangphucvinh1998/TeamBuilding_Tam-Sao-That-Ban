@@ -59,10 +59,10 @@ CREATE TABLE IF NOT EXISTS songs (
     media_url TEXT NOT NULL,
     original_filename TEXT DEFAULT '',
     hint TEXT DEFAULT '',
+    singer TEXT DEFAULT '',
     is_used INTEGER NOT NULL DEFAULT 0,
     is_final_live INTEGER NOT NULL DEFAULT 0
 );
-
 CREATE TABLE IF NOT EXISTS humming_rounds (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
@@ -112,6 +112,12 @@ async def init_db():
         # Safe migration for team_id in songs
         try:
             await db.execute("ALTER TABLE songs ADD COLUMN team_id TEXT REFERENCES teams(id);")
+        except aiosqlite.OperationalError:
+            pass # Column likely already exists
+
+        # Safe migration for singer in songs
+        try:
+            await db.execute("ALTER TABLE songs ADD COLUMN singer TEXT DEFAULT '';")
         except aiosqlite.OperationalError:
             pass # Column likely already exists
             

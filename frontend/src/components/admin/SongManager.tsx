@@ -8,6 +8,7 @@ interface Song {
   media_url: string;
   original_filename: string;
   hint: string;
+  singer: string;
   is_used: boolean;
   is_final_live: boolean;
   team_id?: string;
@@ -19,6 +20,7 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
   const [selectedTeamId, setSelectedTeamId] = useState('');
   const [newTitle, setNewTitle] = useState('');
   const [newHint, setNewHint] = useState('');
+  const [newSinger, setNewSinger] = useState('');
   const [isFinalLive, setIsFinalLive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,6 +58,7 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
     setEditingSongId(song.id);
     setNewTitle(song.title);
     setNewHint(song.hint || '');
+    setNewSinger(song.singer || '');
     setIsFinalLive(song.is_final_live);
     setSelectedTeamId(song.team_id || '');
     setCurrentOriginalFilename(song.original_filename || (song.media_url ? song.media_url.split('/').pop() || '' : ''));
@@ -69,6 +72,7 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
     setEditingSongId(null);
     setNewTitle('');
     setNewHint('');
+    setNewSinger('');
     setIsFinalLive(false);
     setSelectedTeamId('');
     setCurrentOriginalFilename('');
@@ -97,6 +101,7 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
         const payload: any = {
           title: newTitle,
           hint: newHint,
+          singer: newSinger,
           is_final_live: isFinalLive,
           team_id: selectedTeamId || null
         };
@@ -114,11 +119,13 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
           media_url: mediaUrl || '',
           original_filename: originalFilename || '',
           hint: newHint,
+          singer: newSinger,
           is_final_live: isFinalLive,
           team_id: selectedTeamId || null
         });
         setNewTitle('');
         setNewHint('');
+        setNewSinger('');
         setFile(null);
         setCurrentOriginalFilename('');
         setIsFinalLive(false);
@@ -195,7 +202,7 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
     <div className="bg-white rounded-lg shadow-sm border p-6">
       <div className="flex justify-between items-center mb-4 border-b pb-4">
         <h2 className="text-xl font-bold">Quản Lý Bài Hát (Giai Điệu Vượt Ngàn)</h2>
-        <div>
+        <div className="flex flex-col items-end gap-1">
           <label className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm cursor-pointer shadow-sm transition-colors">
             {isImporting ? 'Đang import...' : 'Import CSV'}
             <input 
@@ -207,6 +214,9 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
               ref={fileInputCsvRef}
             />
           </label>
+          <span className="text-[10px] text-gray-500 text-right font-medium">
+            Cấu trúc: STT | Tên Đội | Tên bài hát | Dòng nhạc + Năm phát hành | Ca sĩ | Type | Tên file
+          </span>
         </div>
       </div>
       
@@ -274,12 +284,21 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Gợi ý</label>
+            <label className="block text-sm font-medium mb-1">Gợi ý (Dòng nhạc + Năm phát hành)</label>
             <input 
               type="text" 
               className="w-full border rounded px-3 py-2"
               value={newHint}
               onChange={e => setNewHint(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Ca sĩ (Reveal khi dùng Ngôi sao hy vọng)</label>
+            <input 
+              type="text" 
+              className="w-full border rounded px-3 py-2"
+              value={newSinger}
+              onChange={e => setNewSinger(e.target.value)}
             />
           </div>
           <div className="md:col-span-2 flex items-center gap-2">
@@ -312,6 +331,7 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
               <th className="p-3 font-semibold">Đội</th>
               <th className="p-3 font-semibold">File Media</th>
               <th className="p-3 font-semibold">Gợi ý</th>
+              <th className="p-3 font-semibold">Ca sĩ</th>
               <th className="p-3 font-semibold">Loại</th>
               <th className="p-3 font-semibold">Trạng thái</th>
               <th className="p-3 font-semibold w-24">Thao tác</th>
@@ -328,6 +348,7 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
                   {song.original_filename || (song.media_url ? song.media_url.split('/').pop() : '')}
                 </td>
                 <td className="p-3 text-gray-600">{song.hint}</td>
+                <td className="p-3 text-gray-600">{song.singer}</td>
                 <td className="p-3">
                   {song.is_final_live ? (
                     <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded font-bold">LIVE CUỐI</span>

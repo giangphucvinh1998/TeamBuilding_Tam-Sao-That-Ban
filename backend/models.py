@@ -21,6 +21,8 @@ class GameState(str, Enum):
     ANSWER_CONFIRM = "ANSWER_CONFIRM"
     HINT = "HINT"
     STEAL = "STEAL"
+    THINKING = "THINKING"
+    HOPE_STAR = "HOPE_STAR"
     FINISHED = "FINISHED"
 
 
@@ -131,6 +133,7 @@ class SongCreate(BaseModel):
     media_url: str
     original_filename: str = ""
     hint: str = ""
+    singer: str = ""
     is_final_live: bool = False
     team_id: Optional[str] = None
 
@@ -139,6 +142,7 @@ class SongUpdate(BaseModel):
     media_url: Optional[str] = None
     original_filename: Optional[str] = None
     hint: Optional[str] = None
+    singer: Optional[str] = None
     is_final_live: Optional[bool] = None
     is_used: Optional[bool] = None
     team_id: Optional[str] = None
@@ -150,6 +154,7 @@ class SongResponse(BaseModel):
     media_url: str
     original_filename: str
     hint: str
+    singer: str
     is_used: bool
     is_final_live: bool
     team_id: Optional[str] = None

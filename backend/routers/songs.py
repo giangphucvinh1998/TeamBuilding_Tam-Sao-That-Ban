@@ -40,10 +40,10 @@ async def create_song(request: SongCreate, session_id: str):
     db = await get_db()
     try:
         await db.execute(
-            """INSERT INTO songs (id, session_id, team_id, title, media_url, original_filename, hint, is_final_live)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO songs (id, session_id, team_id, title, media_url, original_filename, hint, singer, is_final_live)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (song_id, session_id, request.team_id, request.title, request.media_url, request.original_filename,
-             request.hint, 1 if request.is_final_live else 0)
+             request.hint, request.singer, 1 if request.is_final_live else 0)
         )
         await db.commit()
 
@@ -52,7 +52,7 @@ async def create_song(request: SongCreate, session_id: str):
             return SongResponse(
                 id=row["id"], session_id=row["session_id"], team_id=row["team_id"], title=row["title"],
                 media_url=row["media_url"], original_filename=row["original_filename"],
-                hint=row["hint"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
+                hint=row["hint"], singer=row["singer"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
             )
     finally:
         await db.close()
@@ -68,7 +68,7 @@ async def list_songs(session_id: str):
             return [SongResponse(
                 id=row["id"], session_id=row["session_id"], team_id=row["team_id"], title=row["title"],
                 media_url=row["media_url"], original_filename=row["original_filename"],
-                hint=row["hint"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
+                hint=row["hint"], singer=row["singer"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
             ) for row in rows]
     finally:
         await db.close()
@@ -103,7 +103,7 @@ async def update_song(song_id: str, request: SongUpdate):
             return SongResponse(
                 id=row["id"], session_id=row["session_id"], team_id=row["team_id"], title=row["title"],
                 media_url=row["media_url"], original_filename=row["original_filename"],
-                hint=row["hint"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
+                hint=row["hint"], singer=row["singer"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
             )
     finally:
         await db.close()
@@ -157,8 +157,9 @@ async def import_songs(session_id: str, file: UploadFile = File(...)):
                 continue
                 
             raw_hint = row[3].strip() if len(row) > 3 else ""
-            raw_type = row[4].strip().lower() if len(row) > 4 else "media"
-            raw_filename = row[5].strip() if len(row) > 5 else ""
+            raw_singer = row[4].strip() if len(row) > 4 else ""
+            raw_type = row[5].strip().lower() if len(row) > 5 else "media"
+            raw_filename = row[6].strip() if len(row) > 6 else ""
 
             # Match team ID
             team_id = teams_map.get(raw_team.lower())
@@ -183,9 +184,9 @@ async def import_songs(session_id: str, file: UploadFile = File(...)):
                         media_url = match_row["media_url"]
 
             await db.execute(
-                """INSERT INTO songs (id, session_id, team_id, title, media_url, original_filename, hint, is_final_live)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (song_id, session_id, team_id, raw_title, media_url, raw_filename, raw_hint, is_final_live)
+                """INSERT INTO songs (id, session_id, team_id, title, media_url, original_filename, hint, singer, is_final_live)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (song_id, session_id, team_id, raw_title, media_url, raw_filename, raw_hint, raw_singer, is_final_live)
             )
             count += 1
 

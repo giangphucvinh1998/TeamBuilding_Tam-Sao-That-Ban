@@ -341,37 +341,43 @@ function RulesOverlay({ show, gameMode }: RulesOverlayProps) {
             <h3 className="text-3xl font-black text-blue-400 mb-6 flex items-center justify-center gap-3">
               <span>🎵 GAME 2: GIAI ĐIỆU VƯỢT NGÀN</span>
             </h3>
-            <ul className="space-y-5 text-left text-lg md:text-xl text-gray-100 max-w-2xl mx-auto list-none pl-0">
+            <ul className="space-y-4 text-left text-lg md:text-xl text-gray-100 max-w-2xl mx-auto list-none pl-0">
               <li className="flex items-start gap-4">
                 <span className="text-2xl mt-0.5 select-none">🎥</span>
                 <div>
-                  <strong className="text-blue-300">HUMMING CA KHÚC:</strong> Màn hình chiếu clip ngân nga giai điệu các bài hát từ BTC hai miền Bắc/Nam và nhân sự miền Trung.
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <span className="text-2xl mt-0.5 select-none">🎯</span>
-                <div>
-                  <strong className="text-blue-300">ĐOÁN TÊN BÀI HÁT:</strong> Các thành viên trong đội có nhiệm vụ phối hợp và đoán chính xác tên bài hát.
+                  <strong className="text-blue-300">GỢI Ý TỪ ĐẦU:</strong> Đội thi được biết gợi ý **Dòng nhạc + Năm phát hành** ngay từ đầu vòng nghe nhạc.
                 </div>
               </li>
               <li className="flex items-start gap-4">
                 <span className="text-2xl mt-0.5 select-none">⏱️</span>
                 <div>
-                  <strong className="text-blue-300">4 VÒNG CLIP QUAY SẴN:</strong>
-                  <ul className="list-disc pl-5 mt-2 space-y-2 text-base text-gray-300">
-                    <li>Trả lời đúng ngay: <strong className="text-green-400">+10 điểm</strong>.</li>
-                    <li>Trả lời sai: Nhận 1 gợi ý. Trả lời đúng sau gợi ý được <strong className="text-green-400">+5 điểm</strong>, trả lời sai <strong className="text-red-400">-5 điểm</strong> (có thể chọn bỏ qua).</li>
-                    <li>Nếu đội chơi bỏ qua hoặc trả lời sai sau gợi ý: Quyền cướp điểm mở ra cho các đội khác. Đúng <strong className="text-green-400">+10 điểm</strong>, sai <strong className="text-red-400">-5 điểm</strong>.</li>
+                  <strong className="text-blue-300">THỜI GIAN THI:</strong> Có **30 giây** nghe nhạc ngân nga và **20 giây** suy nghĩ để đưa ra tên bài hát.
+                </div>
+              </li>
+              <li className="flex items-start gap-4">
+                <span className="text-2xl mt-0.5 select-none">🎯</span>
+                <div>
+                  <strong className="text-blue-300">CÁCH TÍNH ĐIỂM LƯỢT GỐC:</strong> Trả lời đúng nhận <strong className="text-green-400">+10 điểm</strong> (Nhạc Live nhận <strong className="text-green-400">+20 điểm</strong>).
+                </div>
+              </li>
+              <li className="flex items-start gap-4">
+                <span className="text-2xl mt-0.5 select-none">🌟</span>
+                <div>
+                  <strong className="text-blue-300">NGÔI SAO HY VỌNG (KHI SAI):</strong> Lãnh đạo có quyền cứu đội bằng cách kích hoạt Ngôi sao hy vọng (20s suy nghĩ):
+                  <ul className="list-disc pl-5 mt-2 space-y-1 text-base text-gray-300">
+                    <li>Được nghe lại nhạc ngân + tiết lộ gợi ý **Tên ca sĩ**.</li>
+                    <li>Đoán đúng: <strong className="text-green-400">Nhân đôi điểm (+20đ / Live: +40đ)</strong>, không bị trừ điểm gốc.</li>
+                    <li>Đoán sai: <strong className="text-gray-400">0 điểm</strong> (không bị trừ điểm gốc lẫn điểm Ngôi sao), không cho đội khác cướp.</li>
                   </ul>
                 </div>
               </li>
               <li className="flex items-start gap-4">
-                <span className="text-2xl mt-0.5 select-none">🎤</span>
+                <span className="text-2xl mt-0.5 select-none">⚔️</span>
                 <div>
-                  <strong className="text-blue-300">LƯỢT LIVE CUỐI (LIVE HUMMING):</strong> 1 thành viên đại diện lên sân khấu ngân nga trực tiếp.
+                  <strong className="text-blue-300">KHÔNG DÙNG NGÔI SAO HY VỌNG:</strong> 
                   <ul className="list-disc pl-5 mt-2 space-y-1 text-base text-gray-300">
-                    <li>Đoán đúng: <strong className="text-green-400">+20 điểm</strong>.</li>
-                    <li>Đoán sai: <strong className="text-gray-400">Không bị trừ điểm</strong> (không có cướp điểm, không gợi ý).</li>
+                    <li>Đội thi bị phạt <strong className="text-red-400">-5 điểm</strong>.</li>
+                    <li>Quyền cướp điểm mở ra cho các đội khác (Đúng <strong className="text-green-400">+10 điểm</strong>, sai bị trừ <strong className="text-red-400">-5 điểm</strong>).</li>
                   </ul>
                 </div>
               </li>

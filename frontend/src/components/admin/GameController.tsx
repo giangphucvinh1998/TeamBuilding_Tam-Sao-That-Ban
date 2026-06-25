@@ -261,7 +261,7 @@ export default function GameController({ sessionId, gameState }: { sessionId: st
                 
                 <h3 className="font-bold">Đội cướp:</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {teams.filter((t: any) => t.id !== current_team.id).map((t: any) => (
+                  {teams.filter((t: any) => t.id !== current_team?.id).map((t: any) => (
                     <div key={t.id} className="border rounded p-2 flex flex-col gap-2 bg-gray-50">
                       <div className="font-bold">{t.name}</div>
                       <div className="flex gap-2">

@@ -6,20 +6,29 @@ import { api } from '@/lib/api';
 export default function HummingDisplay({ gameState, effectData }: { gameState: any, effectData: any }) {
   const { state, current_song, teams, is_media_playing, is_final_live, timer } = gameState;
   const mediaRef = useRef<HTMLVideoElement>(null);
+  const lastStateRef = useRef(state);
 
   const handleMediaEnded = () => {
-    api.post('/humming/play-pause', { play: false }).catch(console.error);
+    if (state === 'READY') {
+      api.post('/humming/start-playing').catch(console.error);
+    } else {
+      api.post('/humming/play-pause', { play: false }).catch(console.error);
+    }
   };
 
   useEffect(() => {
     if (mediaRef.current) {
       if (is_media_playing) {
+        if (lastStateRef.current !== state && (state === 'PLAYING' || state === 'HOPE_STAR')) {
+          mediaRef.current.currentTime = 0;
+        }
         mediaRef.current.play().catch(e => console.warn("Autoplay blocked:", e));
       } else {
         mediaRef.current.pause();
       }
     }
-  }, [is_media_playing, current_song?.media_url]);
+    lastStateRef.current = state;
+  }, [is_media_playing, current_song?.media_url, state]);
 
   const isVideo = current_song?.media_url?.match(/\.(mp4|mov|webm)$/i);
 
@@ -40,7 +49,7 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
       {/* Media Player (Only for audio) */}
       {!is_final_live && current_song && !isVideo && (
         <div className="absolute opacity-0 pointer-events-none">
-           <video ref={mediaRef} src={current_song.media_url} playsInline onEnded={handleMediaEnded} className="w-px h-px" />
+           <video ref={mediaRef} src={current_song.media_url} playsInline loop={true} onEnded={handleMediaEnded} className="w-px h-px" />
         </div>
       )}
 
@@ -58,7 +67,7 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
             </div>
           ) : isVideo ? (
              <div className="relative w-full max-w-5xl aspect-video rounded-3xl overflow-hidden border-[12px] border-blue-500 shadow-[0_0_50px_rgba(59,130,246,0.6)]">
-               <video src={current_song.media_url} className="w-full h-full object-cover" autoPlay={is_media_playing} muted={false} ref={mediaRef} playsInline onEnded={handleMediaEnded} />
+               <video src={current_song.media_url} className="w-full h-full object-cover" autoPlay={is_media_playing} muted={false} ref={mediaRef} playsInline loop={true} onEnded={handleMediaEnded} />
              </div>
           ) : (
             <div className="relative w-[32rem] h-[32rem]">
@@ -81,6 +90,12 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
         {/* Right Side: Game States */}
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           
+          {current_song?.hint && (
+            <div className="mb-6 bg-blue-950/40 border border-blue-500/30 px-6 py-3 rounded-2xl text-lg text-blue-300 font-bold uppercase tracking-wider backdrop-blur shadow-sm">
+              Gợi ý từ đầu (Dòng nhạc + Năm): {current_song.hint}
+            </div>
+          )}
+
           {state === 'READY' && (
             <div>
                <h2 className="text-5xl font-black mb-6 text-blue-400">HÃY LẮNG NGHE!</h2>
@@ -101,6 +116,15 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
             </div>
           )}
 
+          {state === 'THINKING' && (
+            <div className="w-full">
+              <h2 className="text-4xl font-black mb-8 text-yellow-400 uppercase tracking-widest drop-shadow-[0_0_10px_rgba(250,204,21,0.5)] animate-pulse">
+                ĐỘI THI SUY NGHĨ
+              </h2>
+              <Timer timerInfo={timer} />
+            </div>
+          )}
+
           {state === 'ANSWER_CONFIRM' && (
             <div>
               <div className="text-6xl font-black mb-8 text-orange-400 drop-shadow-[0_0_20px_rgba(249,115,22,0.5)] animate-bounce">
@@ -110,12 +134,16 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
             </div>
           )}
 
-          {state === 'HINT' && (
-            <div className="w-full bg-blue-900/30 border border-blue-500/50 p-10 rounded-3xl backdrop-blur shadow-[0_0_30px_rgba(59,130,246,0.2)]">
-              <div className="text-2xl text-blue-400 font-bold uppercase tracking-widest mb-6">Gợi ý bài hát</div>
-              <div className="text-4xl font-black text-white leading-tight">
-                {current_song?.hint || '(Không có gợi ý)'}
+          {state === 'HOPE_STAR' && (
+            <div className="w-full bg-gradient-to-br from-purple-900/40 to-pink-900/40 border border-purple-500/50 p-10 rounded-3xl backdrop-blur shadow-[0_0_45px_rgba(168,85,247,0.3)] animate-pulse">
+              <div className="text-5xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-500 font-black uppercase tracking-widest mb-6 drop-shadow-[0_0_20px_rgba(168,85,247,0.7)] animate-bounce">
+                🌟 NGÔI SAO HY VỌNG 🌟
               </div>
+              <div className="text-xl text-purple-300 font-bold uppercase tracking-widest mb-3">Gợi ý từ Lãnh đạo (Tên Ca sĩ):</div>
+              <div className="text-4xl font-black text-yellow-300 leading-tight mb-8 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]">
+                {current_song?.singer || '(Chưa cập nhật)'}
+              </div>
+              <Timer timerInfo={timer} />
             </div>
           )}
 
@@ -124,11 +152,7 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
               <div className="text-6xl text-red-500 font-black uppercase tracking-widest mb-6 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] animate-pulse">
                 CƯỚP ĐIỂM!
               </div>
-              <div className="text-2xl text-red-400 font-bold uppercase tracking-widest mb-4">Gợi ý bài hát:</div>
-              <div className="text-3xl font-black text-white leading-tight mb-8">
-                {current_song?.hint}
-              </div>
-              <div className="text-2xl text-white">Các đội khác có quyền trả lời</div>
+              <div className="text-[22px] text-white">Các đội khác có quyền trả lời</div>
             </div>
           )}
 

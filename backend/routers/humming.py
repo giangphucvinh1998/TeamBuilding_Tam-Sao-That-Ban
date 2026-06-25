@@ -93,6 +93,33 @@ async def steal(request: StealRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.post("/activate-hope-star")
+async def activate_hope_star():
+    """Activate Hope Star phase."""
+    try:
+        await humming_game.activate_hope_star()
+        return {"message": "Hope Star activated"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/decline-hope-star")
+async def decline_hope_star():
+    """Decline Hope Star, deduct points, and enter Steal phase."""
+    try:
+        await humming_game.decline_hope_star()
+        return {"message": "Hope Star declined"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/hope-star-answer")
+async def hope_star_answer(request: ConfirmAnswerRequest):
+    """Confirm correctness of Hope Star answer."""
+    try:
+        await humming_game.hope_star_answer(request.correct)
+        return {"message": "Hope Star answer confirmed"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.post("/end-round")
 async def end_round():
     """End the current round."""

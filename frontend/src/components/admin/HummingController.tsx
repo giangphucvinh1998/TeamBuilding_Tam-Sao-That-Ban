@@ -66,18 +66,11 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
     await api.post('/humming/confirm-answer', { correct });
   };
 
-  const handleHintConfirm = async (correct: boolean) => {
-    await api.post('/humming/hint-answer', { correct });
-  };
 
-  const handleSkipHint = async () => {
-    await api.post('/humming/skip-hint');
-  };
 
-  const handleSteal = async (correct: boolean) => {
-    if (!selectedTeam) return alert("Vui lòng chọn đội cướp điểm!");
-    await api.post('/humming/steal', { steal_team_id: selectedTeam, correct });
-    setSelectedTeam('');
+  const handleSteal = async (teamId: string, correct: boolean) => {
+    if (!teamId) return alert("Vui lòng chọn đội cướp điểm!");
+    await api.post('/humming/steal', { steal_team_id: teamId, correct });
   };
 
   const handleEndRound = async () => {
@@ -223,19 +216,11 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
           <div className="grid grid-cols-1 gap-4">
             {state === 'READY' && (
               <div className="flex gap-4">
-                {!is_final_live && (
-                  <button 
-                    onClick={() => handlePlayPause(!is_media_playing)}
-                    className={`flex-1 py-4 rounded-lg font-black text-xl text-white shadow-lg transition-transform active:scale-95 ${is_media_playing ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'}`}
-                  >
-                    {is_media_playing ? '⏸ TẠM DỪNG ĐĨA NHẠC' : '▶ PHÁT ĐĨA NHẠC'}
-                  </button>
-                )}
                 <button 
                   onClick={handleStartTimer}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-lg font-black text-xl shadow-lg transition-transform active:scale-95"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg font-black text-xl shadow-lg transition-transform active:scale-95"
                 >
-                  ⏱ BẮT ĐẦU TÍNH GIỜ (60s)
+                  {is_final_live ? '⏱ BẮT ĐẦU LƯỢT LIVE (30s)' : '▶ PHÁT NHẠC & TÍNH GIỜ (30s)'}
                 </button>
               </div>
             )}
@@ -243,7 +228,7 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
             {state === 'PLAYING' && (
               <div className="space-y-4">
                 <div className="text-center py-4 bg-green-100 text-green-800 rounded-lg text-xl font-bold animate-pulse">
-                  Đang tính giờ đoán bài hát...
+                  Đang phát nhạc ngân nga (30s)...
                 </div>
                 {!is_final_live && (
                   <button 
@@ -257,52 +242,105 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
                   onClick={async () => await api.post('/humming/time-up')}
                   className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xl shadow-lg transition-transform active:scale-95"
                 >
-                  ⏱ HẾT GIỜ (Chốt Đáp Án Nhanh)
+                  ⏱ HẾT GIỜ NGHE (Suy Nghĩ Ngay)
+                </button>
+              </div>
+            )}
+
+            {state === 'THINKING' && (
+              <div className="space-y-4">
+                <div className="text-center py-4 bg-yellow-100 text-yellow-800 rounded-lg text-xl font-bold animate-pulse">
+                  Thời gian suy nghĩ của đội thi (20s)...
+                </div>
+                <button 
+                  onClick={async () => await api.post('/humming/time-up')}
+                  className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xl shadow-lg transition-transform active:scale-95"
+                >
+                  ⏱ HẾT GIỜ (Xác Nhận Đáp Án)
                 </button>
               </div>
             )}
 
             {state === 'ANSWER_CONFIRM' && (
               <div className="space-y-4">
-                <h3 className="text-xl font-bold text-center">Xác nhận đáp án chính:</h3>
-                <div className="flex gap-4">
-                  <button 
-                    className="flex-1 py-6 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-2xl shadow-lg transition-transform active:scale-95"
-                    onClick={() => handleConfirm(true)}
-                  >
-                    ĐÚNG ({is_final_live ? '+20' : '+10'} điểm)
-                  </button>
-                  <button 
-                    className="flex-1 py-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-2xl shadow-lg transition-transform active:scale-95"
-                    onClick={() => handleConfirm(false)}
-                  >
-                    SAI (Mở Gợi Ý)
-                  </button>
-                </div>
+                {gameState.main_answer_correct === 0 ? (
+                  <div className="space-y-4 bg-orange-50 p-4 rounded-lg border border-orange-200">
+                    <div className="text-center text-lg font-bold text-red-700 uppercase">Đội thi trả lời SAI câu gốc. Lựa chọn tiếp theo:</div>
+                    <div className="flex gap-4">
+                      <button 
+                        className="flex-1 py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-lg shadow-md transition-transform active:scale-95"
+                        onClick={async () => await api.post('/humming/activate-hope-star')}
+                      >
+                        🌟 Dùng Ngôi sao hy vọng
+                      </button>
+                      <button 
+                        className="flex-1 py-4 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg text-lg shadow-md transition-transform active:scale-95"
+                        onClick={async () => await api.post('/humming/decline-hope-star')}
+                      >
+                        ❌ Không dùng (-5đ & Cho cướp)
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-bold text-center">Xác nhận đáp án chính:</h3>
+                    <div className="flex gap-4">
+                      <button 
+                        className="flex-1 py-6 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-2xl shadow-lg transition-transform active:scale-95"
+                        onClick={() => handleConfirm(true)}
+                      >
+                        ĐÚNG ({is_final_live ? '+20' : '+10'} điểm)
+                      </button>
+                      <button 
+                        className="flex-1 py-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-2xl shadow-lg transition-transform active:scale-95"
+                        onClick={() => handleConfirm(false)}
+                      >
+                        SAI
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {state === 'HINT' && (
-              <div className="space-y-4">
-                <div className="text-center py-2 bg-yellow-100 text-yellow-800 rounded font-bold">Đã hiện gợi ý. Các đội trả lời:</div>
-                <div className="flex gap-4 flex-wrap">
+            {state === 'HOPE_STAR' && (
+              <div className="space-y-4 bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <div className="text-center py-2 bg-purple-100 text-purple-800 rounded font-bold uppercase text-xl animate-pulse">Vòng Ngôi Sao Hy Vọng</div>
+                
+                <div className="p-4 bg-white rounded border border-purple-300 text-center">
+                  <div className="text-sm text-gray-500 uppercase font-bold mb-1">Ca Sĩ Gợi Ý (Bảo mật)</div>
+                  <div className="text-3xl font-black text-purple-700 my-2">{current_song?.singer || '(Không có)'}</div>
+                </div>
+
+                {!is_final_live && (
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handlePlayPause(true)}
+                      className="flex-1 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded"
+                    >
+                      ▶ Nghe Lại Bản Ngân
+                    </button>
+                    <button 
+                      onClick={() => handlePlayPause(false)}
+                      className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded"
+                    >
+                      Tạm Dừng
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex gap-4 mt-4">
                   <button 
-                    className="flex-1 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-xl"
-                    onClick={() => handleHintConfirm(true)}
+                    className="flex-1 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-xl shadow-md transition-transform active:scale-95"
+                    onClick={async () => await api.post('/humming/hope-star-answer', { correct: true })}
                   >
-                    ĐÚNG SAU GỢI Ý (+5 điểm)
+                    ĐÚNG (Nhân đôi: +{is_final_live ? '40' : '20'}đ)
                   </button>
                   <button 
-                    className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xl"
-                    onClick={() => handleHintConfirm(false)}
+                    className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xl shadow-md transition-transform active:scale-95"
+                    onClick={async () => await api.post('/humming/hope-star-answer', { correct: false })}
                   >
-                    SAI (-5 điểm)
-                  </button>
-                  <button 
-                    className="w-full py-4 bg-gray-500 hover:bg-gray-600 text-white font-bold rounded-lg text-xl"
-                    onClick={handleSkipHint}
-                  >
-                    BỎ QUA (Đội khác cướp)
+                    SAI (0đ)
                   </button>
                 </div>
               </div>
@@ -314,12 +352,12 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
                 
                 <h3 className="font-bold">Đội cướp:</h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {teams?.filter((t: any) => t.id !== current_team.id).map((t: any) => (
+                  {teams?.filter((t: any) => t.id !== current_team?.id).map((t: any) => (
                     <div key={t.id} className="border rounded p-2 flex flex-col gap-2 bg-white shadow-sm">
                       <div className="font-bold">{t.name}</div>
                       <div className="flex gap-2">
-                        <button className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded shadow-sm" onClick={() => { setSelectedTeam(t.id); handleSteal(true); }}>ĐÚNG (+10)</button>
-                        <button className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded shadow-sm" onClick={() => { setSelectedTeam(t.id); handleSteal(false); }}>SAI (-5)</button>
+                        <button className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded shadow-sm" onClick={() => handleSteal(t.id, true)}>ĐÚNG (+10)</button>
+                        <button className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded shadow-sm" onClick={() => handleSteal(t.id, false)}>SAI (-5)</button>
                       </div>
                     </div>
                   ))}
