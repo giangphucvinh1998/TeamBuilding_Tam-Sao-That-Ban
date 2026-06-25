@@ -290,8 +290,25 @@ function RulesOverlay({ show, gameMode }: RulesOverlayProps) {
               </li>
               <li className="flex items-start gap-4">
                 <span className="text-2xl mt-0.5 select-none">🏆</span>
-                <div>
-                  <strong className="text-green-300">CÁCH TÍNH ĐIỂM:</strong> Điểm số được tính dựa trên số lượng từ khóa tìm được và điền đúng vị trí chính xác trên ma trận trống.
+                <div className="w-full">
+                  <strong className="text-green-300">CÁCH TÍNH ĐIỂM:</strong> Điểm số xếp hạng dựa trên số lượng từ khóa tìm được chính xác trên ma trận trống:
+                  <div className="mt-4 grid grid-cols-5 gap-2 text-center text-xs md:text-sm font-bold">
+                    <div className="bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 py-2 px-1 rounded-xl shadow-[0_0_10px_rgba(234,179,8,0.1)]">
+                      🥇 Nhất: 50đ
+                    </div>
+                    <div className="bg-slate-300/20 border border-slate-300/40 text-slate-200 py-2 px-1 rounded-xl shadow-[0_0_10px_rgba(203,213,225,0.1)]">
+                      🥈 Nhì: 40đ
+                    </div>
+                    <div className="bg-amber-600/20 border border-amber-600/40 text-amber-300 py-2 px-1 rounded-xl shadow-[0_0_10px_rgba(217,119,6,0.1)]">
+                      🥉 Ba: 30đ
+                    </div>
+                    <div className="bg-blue-500/20 border border-blue-500/40 text-blue-300 py-2 px-1 rounded-xl">
+                      🏅 Tư: 20đ
+                    </div>
+                    <div className="bg-gray-600/20 border border-gray-500/40 text-gray-400 py-2 px-1 rounded-xl">
+                      🎗️ Năm: 10đ
+                    </div>
+                  </div>
                 </div>
               </li>
             </ul>
