@@ -7,6 +7,7 @@ import HummingDisplay from '@/components/display/HummingDisplay';
 import MatrixDisplay from '@/components/display/MatrixDisplay';
 import game1Audio from '@/assets/game1.mp3';
 import backgroundGame1Audio from '@/assets/background-game1.mp3';
+import backgroundRuleAudio from '@/assets/background-rule-game.mp3';
 
 const TEAM_COLORS: Record<string, string> = {
   'XANH BIỂN': 'text-blue-400',
@@ -26,6 +27,7 @@ export default function DisplayPage() {
   const videoRef2 = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const backgroundGame1Ref = useRef<HTMLAudioElement>(null);
+  const backgroundRuleRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     if (gameState?.show_intro) {
@@ -66,6 +68,19 @@ export default function DisplayPage() {
     }
   }, [gameState?.game_mode, gameState?.state]);
 
+  useEffect(() => {
+    if (gameState?.show_rules) {
+      backgroundRuleRef.current?.play().catch(e => {
+        console.warn("Autoplay rules audio blocked, waiting for interaction:", e);
+      });
+    } else {
+      backgroundRuleRef.current?.pause();
+      if (backgroundRuleRef.current) {
+        backgroundRuleRef.current.currentTime = 0;
+      }
+    }
+  }, [gameState?.show_rules]);
+
   const handleInteract = () => {
     if (gameState?.show_intro) {
       if (videoRef1.current) videoRef1.current.play();
@@ -86,6 +101,10 @@ export default function DisplayPage() {
 
     if (isMatrixPlaying) {
       backgroundGame1Ref.current?.play().catch(e => console.warn("Interactive playing play failed:", e));
+    }
+
+    if (gameState?.show_rules) {
+      backgroundRuleRef.current?.play().catch(e => console.warn("Interactive rules play failed:", e));
     }
   };
 
@@ -122,6 +141,7 @@ export default function DisplayPage() {
         )}
         <audio ref={audioRef} src={game1Audio} loop />
         <audio ref={backgroundGame1Ref} src={backgroundGame1Audio} loop />
+        <audio ref={backgroundRuleRef} src={backgroundRuleAudio} loop />
         <RulesOverlay show={gameState?.show_rules} gameMode={gameState?.game_mode} />
         <ScoreboardOverlay show={gameState?.show_scoreboard} teams={gameState?.teams} />
       </div>
@@ -138,6 +158,7 @@ export default function DisplayPage() {
       <GameEffects effectData={lastEffect} />
       <audio ref={audioRef} src={game1Audio} loop />
       <audio ref={backgroundGame1Ref} src={backgroundGame1Audio} loop />
+      <audio ref={backgroundRuleRef} src={backgroundRuleAudio} loop />
 
       {/* Background ambient glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-64 bg-purple-600/20 blur-[120px] rounded-full pointer-events-none"></div>
