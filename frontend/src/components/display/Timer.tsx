@@ -58,7 +58,7 @@ export default function Timer({ timerInfo }: { timerInfo: any }) {
   return (
     <div className="flex flex-col items-center justify-center my-8">
       <div className="text-2xl font-bold uppercase tracking-widest text-gray-400 mb-2">
-        {timerInfo.type === 'preparing' ? 'Thời Gian Chuẩn Bị' : 'Thời Gian Thi Đấu'}
+        {timerInfo.type === 'preparing' ? 'Thời Gian Chuẩn Bị' : timerInfo.type === 'guessing' ? 'Thời Gian Trả Lời' : 'Thời Gian Thi Đấu'}
       </div>
       <div className={`text-[20rem] leading-none font-black transition-all duration-300 font-mono ${colorClass}`}>
         {seconds}

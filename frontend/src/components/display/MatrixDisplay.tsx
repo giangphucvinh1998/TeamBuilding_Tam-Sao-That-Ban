@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import Timer from './Timer';
+import { useEffect, useState, useRef } from 'react';
 import Scoreboard from './Scoreboard';
 
 interface MatrixDisplayProps {
@@ -9,19 +8,61 @@ interface MatrixDisplayProps {
 export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
   const { state, matrix, timer, teams } = gameState;
   const [visibleCells, setVisibleCells] = useState<boolean[][]>([]);
-  const [cellStyles, setCellStyles] = useState<{opacity?: number, scale?: number, bgColor?: string}[][]>([]);
+  const [cellStyles, setCellStyles] = useState<{ opacity?: number, scale?: number, bgColor?: string }[][]>([]);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const reqRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!timer || !['PHASE_1', 'PHASE_2', 'PHASE_3'].includes(state)) {
+      setTimeLeft(0);
+      return;
+    }
+
+    const animate = () => {
+      const now = Date.now();
+      const elapsed = now / 1000 - timer.start_time;
+      const rem = Math.max(0, timer.duration - elapsed);
+
+      let totalRem = 0;
+      if (state === 'PHASE_1') {
+        totalRem = rem + 80;
+      } else if (state === 'PHASE_2') {
+        totalRem = rem + 40;
+      } else if (state === 'PHASE_3') {
+        totalRem = rem;
+      }
+
+      setTimeLeft(Math.ceil(totalRem));
+
+      if (rem > 0) {
+        reqRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    reqRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (reqRef.current) cancelAnimationFrame(reqRef.current);
+    };
+  }, [timer, state]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
 
   // Initialize arrays
   useEffect(() => {
     if (matrix && matrix.length > 0) {
       const rows = matrix.length;
       const cols = matrix[0].length;
-      
+
       if (visibleCells.length !== rows) {
-         setVisibleCells(Array(rows).fill(null).map(() => Array(cols).fill(false)));
+        setVisibleCells(Array(rows).fill(null).map(() => Array(cols).fill(false)));
       }
       if (cellStyles.length !== rows) {
-         setCellStyles(Array(rows).fill(null).map(() => Array(cols).fill({})));
+        setCellStyles(Array(rows).fill(null).map(() => Array(cols).fill({})));
       }
     }
   }, [matrix, state]);
@@ -32,10 +73,10 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
       // Reset visibility
       const newVis = Array(10).fill(null).map(() => Array(10).fill(false));
       setVisibleCells(newVis);
-      
+
       let step = 0;
       const maxSteps = 49; // 50 steps to fill 100 cells (2 at a time)
-      
+
       const interval = setInterval(() => {
         setVisibleCells(prev => {
           const next = [...prev].map(row => [...row]);
@@ -52,10 +93,10 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
           }
           return next;
         });
-        
+
         step++;
         if (step > maxSteps) clearInterval(interval);
-      }, 600); // 50 steps * 600ms = 30000ms (30s)
+      }, 200); // 50 steps * 200ms = 10000ms (10s)
 
       return () => clearInterval(interval);
     } else if (state !== 'PHASE_1' && state !== 'WAITING') {
@@ -71,7 +112,7 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
     let interval: any;
     if (state === 'PHASE_2' && matrix && matrix.length === 10) {
       interval = setInterval(() => {
-        setCellStyles(prev => {
+        setCellStyles(() => {
           const next = Array(10).fill(null).map(() => Array(10).fill({}));
           for (let r = 0; r < 10; r++) {
             for (let c = 0; c < 10; c++) {
@@ -85,7 +126,7 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
       // Clear styles if not phase 2
       if (state !== 'PHASE_3') {
         if (matrix) {
-            setCellStyles(Array(matrix.length).fill(null).map(() => Array(matrix[0].length).fill({})));
+          setCellStyles(Array(matrix.length).fill(null).map(() => Array(matrix[0].length).fill({})));
         }
       }
     }
@@ -97,13 +138,13 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
     let interval: any;
     if (state === 'PHASE_3' && matrix && matrix.length === 10) {
       interval = setInterval(() => {
-        setCellStyles(prev => {
+        setCellStyles(() => {
           const next = Array(10).fill(null).map(() => Array(10).fill({}));
           for (let r = 0; r < 10; r++) {
             for (let c = 0; c < 10; c++) {
               // Scale range: 0.3 to 1.6 (randomly shrinking and enlarging)
-              next[r][c] = { 
-                scale: 0.3 + Math.random() * 1.3,
+              next[r][c] = {
+                scale: 0.8 + Math.random() * 0.4,
                 bgColor: `hsl(${Math.floor(Math.random() * 360)}, 80%, 40%)`
               };
             }
@@ -112,11 +153,11 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
         });
       }, 600);
     } else {
-       if (state !== 'PHASE_2') {
-           if (matrix) {
-               setCellStyles(Array(matrix.length).fill(null).map(() => Array(matrix[0].length).fill({})));
-           }
-       }
+      if (state !== 'PHASE_2') {
+        if (matrix) {
+          setCellStyles(Array(matrix.length).fill(null).map(() => Array(matrix[0].length).fill({})));
+        }
+      }
     }
     return () => clearInterval(interval);
   }, [state, matrix?.length]);
@@ -127,23 +168,30 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center w-full max-w-6xl z-10 relative">
-      
+    <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[92vw] z-10 relative pt-16">
 
+      {timeLeft > 0 && (
+        <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center">
+          <div className="text-sm font-bold uppercase tracking-widest text-purple-400 mb-1">Thời gian còn lại</div>
+          <div className="bg-black/80 px-8 py-2.5 rounded-full border border-purple-500/50 font-mono text-4xl font-black text-yellow-400 shadow-[0_0_20px_rgba(168,85,247,0.4)] backdrop-blur-sm min-w-[150px] text-center">
+            {formatTime(timeLeft)}
+          </div>
+        </div>
+      )}
 
       {(state === 'PHASE_1' || state === 'PHASE_2' || state === 'PHASE_3' || state === 'FINISHED') && (
-        <div className="bg-white/10 p-4 rounded-xl backdrop-blur shadow-[0_0_50px_rgba(147,51,234,0.3)]">
-          <div className="grid grid-cols-10 gap-2">
+        <div className="bg-white/10 p-3 rounded-xl backdrop-blur shadow-[0_0_50px_rgba(147,51,234,0.3)] w-full">
+          <div className="grid grid-cols-10 gap-1.5">
             {matrix.map((row: string[], rIdx: number) => (
               row.map((cell: string, cIdx: number) => {
                 const isVisible = visibleCells[rIdx]?.[cIdx] ?? true;
                 const style = cellStyles[rIdx]?.[cIdx] ?? {};
-                
+
                 return (
-                  <div 
+                  <div
                     key={`${rIdx}-${cIdx}`}
                     className={`
-                      w-24 h-24 flex items-center justify-center text-center p-1
+                      w-full h-[6.5vh] flex items-center justify-center text-center p-1
                       bg-gradient-to-br from-indigo-900 to-purple-900 border-2 border-purple-400/50
                       rounded-lg shadow-inner font-bold text-white text-lg
                       transition-all duration-300
@@ -165,29 +213,21 @@ export default function MatrixDisplay({ gameState }: MatrixDisplayProps) {
         </div>
       )}
 
-      {(state === 'PHASE_2' || state === 'PHASE_3') && timer && (
-        <div className="absolute top-4 right-4">
-           <div className="bg-black/50 px-6 py-2 rounded-full border border-gray-600 font-mono text-xl text-yellow-400">
-             {Math.max(0, Math.floor(timer.duration - (Date.now() / 1000 - timer.start_time)))}s
-           </div>
-        </div>
-      )}
-
       {state === 'SCORING' && (
-         <div className="text-center w-full">
-            <h2 className="text-6xl font-black mb-12 text-blue-400 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]">
-               ĐANG CHẤM ĐIỂM
-            </h2>
-            <div className="text-3xl text-gray-300 animate-pulse">Các đội nộp giấy thi cho Ban Tổ Chức</div>
-         </div>
+        <div className="text-center w-full">
+          <h2 className="text-6xl font-black mb-12 text-blue-400 drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]">
+            ĐANG CHẤM ĐIỂM
+          </h2>
+          <div className="text-3xl text-gray-300 animate-pulse">Các đội nộp giấy thi cho Ban Tổ Chức</div>
+        </div>
       )}
 
       {state === 'FINISHED' && (
         <div className="absolute inset-0 bg-black/80 z-20 flex flex-col items-center justify-center backdrop-blur-sm">
-           <h2 className="text-6xl font-black mb-12 text-green-400 drop-shadow-[0_0_20px_rgba(74,222,128,0.5)]">
-             KẾT QUẢ VÒNG MÒ KIM BỂ CHỮ
-           </h2>
-           <Scoreboard teams={teams} />
+          <h2 className="text-6xl font-black mb-12 text-green-400 drop-shadow-[0_0_20px_rgba(74,222,128,0.5)]">
+            KẾT QUẢ VÒNG MÒ KIM BỂ CHỮ
+          </h2>
+          <Scoreboard teams={teams} />
         </div>
       )}
 

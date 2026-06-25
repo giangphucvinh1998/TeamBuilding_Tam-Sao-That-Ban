@@ -4,7 +4,7 @@ import time
 import uuid
 import asyncio
 from typing import Optional, Dict
-from database import get_db
+from database import get_db, ensure_default_teams
 from websocket_manager import manager
 from models import GameState, TimerInfo, TeamResponse
 
@@ -23,20 +23,43 @@ class GameStateMachine:
         self.hint_visible: bool = False
         self.steal_active: bool = False
         self.show_intro: bool = False
+        self.show_rules: bool = False
+        self.show_scoreboard: bool = False
+        self.active_game_mode: str = "MATRIX"
         self._timer_task: Optional[asyncio.Task] = None
+        self.selected_team_id: Optional[str] = None
 
     async def get_full_state(self) -> dict:
         """Get the full current game state."""
+        if self.session_id:
+            await ensure_default_teams(self.session_id)
         db = await get_db()
         try:
             # Get teams
             teams = []
+
             async with db.execute(
                 "SELECT * FROM teams WHERE session_id = ? ORDER BY play_order",
                 (self.session_id,)
             ) as cursor:
                 rows = await cursor.fetchall()
                 for row in rows:
+                    # Count keywords played by this team
+                    async with db.execute(
+                        "SELECT COUNT(*) as cnt FROM rounds WHERE session_id = ? AND team_id = ? AND state = 'FINISHED'",
+                        (self.session_id, row["id"])
+                    ) as count_cursor:
+                        count_row = await count_cursor.fetchone()
+                        completed_rounds = count_row["cnt"] if count_row else 0
+                        
+                    # Count songs played by this team
+                    async with db.execute(
+                        "SELECT COUNT(*) as cnt FROM humming_rounds WHERE session_id = ? AND team_id = ? AND state = 'FINISHED'",
+                        (self.session_id, row["id"])
+                    ) as song_cursor:
+                        song_row = await song_cursor.fetchone()
+                        completed_songs = song_row["cnt"] if song_row else 0
+
                     teams.append(TeamResponse(
                         id=row["id"],
                         session_id=row["session_id"],
@@ -44,6 +67,8 @@ class GameStateMachine:
                         member_count=row["member_count"],
                         score=row["score"],
                         play_order=row["play_order"],
+                        completed_rounds=completed_rounds,
+                        completed_songs=completed_songs
                     ))
 
             # Get current keyword info
@@ -86,6 +111,9 @@ class GameStateMachine:
                 "hint_visible": self.hint_visible,
                 "steal_active": self.steal_active,
                 "show_intro": self.show_intro,
+                "show_rules": self.show_rules,
+                "show_scoreboard": self.show_scoreboard,
+                "selected_team_id": self.selected_team_id,
             }
         finally:
             await db.close()
@@ -99,6 +127,30 @@ class GameStateMachine:
         """Toggle the intro video."""
         self.show_intro = not self.show_intro
         await self.broadcast_state()
+
+    async def toggle_rules(self):
+        """Toggle the rules overlay."""
+        self.show_rules = not self.show_rules
+        from humming_game_state import humming_game
+        from matrix_game_state import matrix_game
+        if self.active_game_mode == "MATRIX":
+            await matrix_game.broadcast_state()
+        elif self.active_game_mode == "HUMMING":
+            await humming_game.broadcast_state()
+        else:
+            await self.broadcast_state()
+
+    async def toggle_scoreboard(self):
+        """Toggle the scoreboard overlay."""
+        self.show_scoreboard = not self.show_scoreboard
+        from humming_game_state import humming_game
+        from matrix_game_state import matrix_game
+        if self.active_game_mode == "MATRIX":
+            await matrix_game.broadcast_state()
+        elif self.active_game_mode == "HUMMING":
+            await humming_game.broadcast_state()
+        else:
+            await self.broadcast_state()
 
     async def set_session(self, session_id: str):
         """Set the active session."""
@@ -129,8 +181,6 @@ class GameStateMachine:
 
             if not keyword_row:
                 raise ValueError("Keyword not found")
-            if keyword_row["is_used"]:
-                raise ValueError("Keyword has already been used")
 
             # Mark keyword as used
             await db.execute(
@@ -160,6 +210,7 @@ class GameStateMachine:
             self.current_keyword_id = keyword_row["id"]
             self.current_round_id = round_id
             self.state = GameState.READY
+            self.active_game_mode = "TAM_SAO"
             self.hint_visible = False
             self.steal_active = False
             self.timer_info = None
@@ -170,14 +221,14 @@ class GameStateMachine:
             await db.close()
 
     async def start_preparing(self):
-        """Start the 15-second preparation timer."""
+        """Start the 30-second preparation timer."""
         if self.state != GameState.READY:
             raise ValueError(f"Cannot start preparing in state {self.state}")
 
         self.state = GameState.PREPARING
         self.timer_info = TimerInfo(
             start_time=time.time(),
-            duration=15,
+            duration=30,
             type="preparing"
         )
 
@@ -193,7 +244,7 @@ class GameStateMachine:
 
         await self.broadcast_state()
 
-        # Auto-transition to PLAYING after 15 seconds
+        # Auto-transition to PLAYING after 30 seconds
         if self._timer_task:
             self._timer_task.cancel()
         self._timer_task = asyncio.create_task(self._prep_timer_callback())
@@ -201,33 +252,27 @@ class GameStateMachine:
     async def _prep_timer_callback(self):
         """Auto-transition from PREPARING to PLAYING."""
         try:
-            await asyncio.sleep(15)
+            await asyncio.sleep(30)
             await self.start_playing()
         except asyncio.CancelledError:
             pass
 
     async def start_playing(self):
-        """Start the contest timer (memberCount × 10 seconds)."""
+        """Start the contest timer (60 seconds)."""
         if self.state not in (GameState.PREPARING, GameState.READY):
             raise ValueError(f"Cannot start playing in state {self.state}")
 
+        duration = 60
+
+        self.state = GameState.PLAYING
+        self.timer_info = TimerInfo(
+            start_time=time.time(),
+            duration=duration,
+            type="playing"
+        )
+
         db = await get_db()
         try:
-            # Get member count for timer calculation
-            async with db.execute(
-                "SELECT member_count FROM teams WHERE id = ?",
-                (self.current_team_id,)
-            ) as cursor:
-                team_row = await cursor.fetchone()
-                duration = team_row["member_count"] * 10
-
-            self.state = GameState.PLAYING
-            self.timer_info = TimerInfo(
-                start_time=time.time(),
-                duration=duration,
-                type="playing"
-            )
-
             await db.execute(
                 "UPDATE rounds SET state = ? WHERE id = ?",
                 (GameState.PLAYING.value, self.current_round_id)
@@ -258,7 +303,11 @@ class GameStateMachine:
             return
 
         self.state = GameState.ANSWER_CONFIRM
-        self.timer_info = None
+        self.timer_info = TimerInfo(
+            start_time=time.time(),
+            duration=10,
+            type="guessing"
+        )
 
         db = await get_db()
         try:
@@ -298,16 +347,19 @@ class GameStateMachine:
                 await db.commit()
 
                 self.state = GameState.FINISHED
+                self.timer_info = None
                 await self.broadcast_state()
                 await manager.broadcast_effect("correct", {"points": 10, "team_id": self.current_team_id})
                 return {"correct": True, "points": 10}
             else:
-                # Wrong answer - show hint
-                self.state = GameState.HINT
+                # Wrong answer - bypass HINT, go directly to STEAL
+                self.state = GameState.STEAL
+                self.steal_active = True
                 self.hint_visible = True
+                self.timer_info = None
                 await db.execute(
                     "UPDATE rounds SET state = ? WHERE id = ?",
-                    (GameState.HINT.value, self.current_round_id)
+                    (GameState.STEAL.value, self.current_round_id)
                 )
                 await db.commit()
 
@@ -374,34 +426,41 @@ class GameStateMachine:
             )
 
             if correct:
-                # +5 points for stealing
+                # +10 points for stealing
                 await db.execute(
-                    "UPDATE teams SET score = score + 5 WHERE id = ?",
+                    "UPDATE teams SET score = score + 10 WHERE id = ?",
                     (steal_team_id,)
                 )
                 await db.execute(
-                    "UPDATE rounds SET score_awarded = 5, score_to_team = ?, state = ? WHERE id = ?",
+                    "UPDATE rounds SET score_awarded = 10, score_to_team = ?, state = ? WHERE id = ?",
                     (steal_team_id, GameState.FINISHED.value, self.current_round_id)
                 )
                 await db.commit()
 
                 self.state = GameState.FINISHED
                 self.steal_active = False
+                self.timer_info = None
                 await self.broadcast_state()
-                await manager.broadcast_effect("correct", {"points": 5, "team_id": steal_team_id})
-                return {"correct": True, "points": 5, "team_id": steal_team_id}
+                await manager.broadcast_effect("correct", {"points": 10, "team_id": steal_team_id})
+                return {"correct": True, "points": 10, "team_id": steal_team_id}
             else:
+                # -5 points for incorrect steal
                 await db.execute(
-                    "UPDATE rounds SET state = ? WHERE id = ?",
-                    (GameState.FINISHED.value, self.current_round_id)
+                    "UPDATE teams SET score = score - 5 WHERE id = ?",
+                    (steal_team_id,)
+                )
+                await db.execute(
+                    "UPDATE rounds SET score_awarded = -5, score_to_team = ?, state = ? WHERE id = ?",
+                    (steal_team_id, GameState.FINISHED.value, self.current_round_id)
                 )
                 await db.commit()
 
                 self.state = GameState.FINISHED
                 self.steal_active = False
+                self.timer_info = None
                 await self.broadcast_state()
-                await manager.broadcast_effect("wrong")
-                return {"correct": False, "points": 0}
+                await manager.broadcast_effect("wrong_deduct", {"points": 5, "team_id": steal_team_id})
+                return {"correct": False, "points": -5, "team_id": steal_team_id}
         finally:
             await db.close()
 
@@ -436,25 +495,27 @@ class GameStateMachine:
         await self.broadcast_state()
 
     async def skip_to_hint(self):
-        """MC manually skips to hint state (from ANSWER_CONFIRM)."""
+        """MC manually skips to steal state (bypassing HINT)."""
         if self.state != GameState.ANSWER_CONFIRM:
             raise ValueError(f"Cannot skip to hint in state {self.state}")
 
-        self.state = GameState.HINT
+        self.state = GameState.STEAL
+        self.steal_active = True
         self.hint_visible = True
+        self.timer_info = None
 
         db = await get_db()
         try:
             await db.execute(
                 "UPDATE rounds SET main_answer_correct = 0, state = ? WHERE id = ?",
-                (GameState.HINT.value, self.current_round_id)
+                (GameState.STEAL.value, self.current_round_id)
             )
             await db.commit()
         finally:
             await db.close()
 
         await self.broadcast_state()
-        await manager.broadcast_effect("show_hint")
+        await manager.broadcast_effect("wrong")
 
     async def skip_to_steal(self):
         """MC manually skips to steal state (from HINT)."""
@@ -524,6 +585,7 @@ class GameStateMachine:
         self.timer_info = None
         self.hint_visible = False
         self.steal_active = False
+        self.selected_team_id = None
 
         if self._timer_task:
             self._timer_task.cancel()
@@ -542,6 +604,7 @@ class GameStateMachine:
         self.timer_info = None
         self.hint_visible = False
         self.steal_active = False
+        self.selected_team_id = None
 
         if self._timer_task:
             self._timer_task.cancel()

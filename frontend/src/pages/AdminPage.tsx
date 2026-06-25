@@ -14,12 +14,20 @@ export default function AdminPage() {
   const navigate = useNavigate();
   const [activeSession, setActiveSession] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'control' | 'teams' | 'keywords' | 'songs' | 'settings'>('control');
-  const [controlMode, setControlMode] = useState<'TAM_SAO' | 'HUMMING' | 'MATRIX'>('TAM_SAO');
+  const [controlMode, setControlMode] = useState<'TAM_SAO' | 'HUMMING' | 'MATRIX'>('MATRIX');
   const { gameState } = useWebSocket('admin');
 
   const toggleIntro = async () => {
     try {
       await api.post('/game/toggle-intro', {});
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const toggleScoreboard = async () => {
+    try {
+      await api.post('/game/toggle-scoreboard', {});
     } catch (e) {
       console.error(e);
     }
@@ -33,6 +41,28 @@ export default function AdminPage() {
       // navigate('/admin/pin');
     }
   }, [navigate]);
+
+  // Fetch active session on mount to persist state across reloads
+  useEffect(() => {
+    const fetchActiveSession = async () => {
+      try {
+        const data = await api.get('/sessions');
+        const active = data.find((s: any) => s.status === 'ACTIVE');
+        if (active) {
+          setActiveSession(active);
+        }
+      } catch (e) {
+        console.error("Failed to fetch active session on mount:", e);
+      }
+    };
+    fetchActiveSession();
+  }, []);
+
+  useEffect(() => {
+    api.post(`/game/set-mode/${controlMode}`).catch(err => {
+      console.error("Failed to set game mode on backend:", err);
+    });
+  }, [controlMode]);
 
   return (
     <div className="min-h-screen bg-gray-100 text-foreground">
@@ -54,6 +84,13 @@ export default function AdminPage() {
             >
               📺 {gameState?.show_intro ? 'ĐANG PHÁT INTRO' : 'BẬT INTRO'}
             </button>
+            <button 
+              onClick={toggleScoreboard}
+              className={`ml-2 px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition-all border-2 ${gameState?.show_scoreboard ? 'bg-green-50 text-green-600 border-green-500 animate-pulse' : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100'}`}
+              title="Bật/Tắt hiển thị bảng điểm tổng sắp trên máy chiếu"
+            >
+              📊 {gameState?.show_scoreboard ? 'ĐANG HIỂN THỊ ĐIỂM' : 'HIỂN THỊ ĐIỂM'}
+            </button>
           </div>
           
           <nav className="flex gap-1">
@@ -73,13 +110,13 @@ export default function AdminPage() {
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'keywords' ? 'bg-purple-600 text-white' : 'hover:bg-gray-100'}`}
               onClick={() => setActiveTab('keywords')}
             >
-              Từ Khóa (TSTB)
+              Từ Khóa (MMLT)
             </button>
             <button 
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'songs' ? 'bg-purple-600 text-white' : 'hover:bg-gray-100'}`}
               onClick={() => setActiveTab('songs')}
             >
-              Bài Hát (Ngân Nga)
+              Bài Hát (Vượt Ngàn)
             </button>
             <button 
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === 'settings' ? 'bg-purple-600 text-white' : 'hover:bg-gray-100'}`}
@@ -110,22 +147,22 @@ export default function AdminPage() {
               <div className="lg:col-span-2">
                 <div className="bg-white p-2 rounded-lg shadow-sm border mb-4 flex gap-2">
                   <button 
-                    onClick={() => setControlMode('TAM_SAO')}
-                    className={`flex-1 py-2 font-bold rounded ${controlMode === 'TAM_SAO' ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                    onClick={() => setControlMode('MATRIX')}
+                    className={`flex-1 py-2 font-bold rounded ${controlMode === 'MATRIX' ? 'bg-green-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
                   >
-                    TAM SAO THẤT BẢN
+                    MÒ KIM BỂ CHỮ
                   </button>
                   <button 
                     onClick={() => setControlMode('HUMMING')}
                     className={`flex-1 py-2 font-bold rounded ${controlMode === 'HUMMING' ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
                   >
-                    GIAI ĐIỆU NGÂN NGA
+                    GIAI ĐIỆU VƯỢT NGÀN
                   </button>
                   <button 
-                    onClick={() => setControlMode('MATRIX')}
-                    className={`flex-1 py-2 font-bold rounded ${controlMode === 'MATRIX' ? 'bg-green-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                    onClick={() => setControlMode('TAM_SAO')}
+                    className={`flex-1 py-2 font-bold rounded ${controlMode === 'TAM_SAO' ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
                   >
-                    MÒ KIM BỂ CHỮ
+                    MẬT MÃ LẶNG THINH
                   </button>
                 </div>
                 {controlMode === 'TAM_SAO' ? (
@@ -138,11 +175,23 @@ export default function AdminPage() {
               </div>
               <div className="lg:col-span-1 space-y-6">
                  {/* Mini Scoreboard could go here */}
-                 <div className="p-4 border rounded-lg bg-card shadow-sm">
-                    <h3 className="font-bold text-lg mb-2">Bảng Điểm Nhanh</h3>
-                    <p className="text-sm text-gray-500">Xem điểm nhanh để điều phối trò chơi.</p>
+                  <div className="p-4 border rounded-lg bg-card shadow-sm">
+                    <div className="flex justify-between items-center mb-2">
+                       <h3 className="font-bold text-lg">Bảng Điểm Nhanh</h3>
+                       <button
+                         onClick={toggleScoreboard}
+                         className={`px-3 py-1 text-xs font-bold rounded border transition-all ${
+                           gameState?.show_scoreboard
+                             ? 'bg-green-600 text-white border-green-500 animate-pulse'
+                             : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300'
+                         }`}
+                       >
+                         📊 {gameState?.show_scoreboard ? 'ẨN ĐIỂM CHIẾU' : 'HIỆN ĐIỂM CHIẾU'}
+                       </button>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-2">Xem điểm nhanh để điều phối trò chơi.</p>
                     <TeamManager sessionId={activeSession?.id} />
-                 </div>
+                  </div>
               </div>
             </div>
           )}

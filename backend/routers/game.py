@@ -122,8 +122,74 @@ async def toggle_intro():
     await game.toggle_intro()
     return {"message": "Intro toggled", "show_intro": game.show_intro}
 
+@router.post("/toggle-rules")
+async def toggle_rules():
+    """Toggle the rules overlay."""
+    await game.toggle_rules()
+    return {"message": "Rules toggled", "show_rules": game.show_rules}
+
+@router.post("/toggle-scoreboard")
+async def toggle_scoreboard():
+    """Toggle the scoreboard overlay."""
+    await game.toggle_scoreboard()
+    return {"message": "Scoreboard toggled", "show_scoreboard": game.show_scoreboard}
+
+@router.post("/set-mode/{mode}")
+async def set_game_mode(mode: str):
+    """Set the active game mode and reset other game states to WAITING."""
+    if mode not in ["TAM_SAO", "HUMMING", "MATRIX"]:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Invalid game mode")
+    
+    game.active_game_mode = mode
+    from humming_game_state import humming_game
+    from matrix_game_state import matrix_game
+    
+    # Reset other game states so they start fresh in WAITING
+    try:
+        await game.force_cancel()
+    except Exception as e:
+        print(f"Error resetting TAM_SAO state: {e}")
+        
+    try:
+        await humming_game.force_cancel()
+    except Exception as e:
+        print(f"Error resetting HUMMING state: {e}")
+        
+    try:
+        await matrix_game.reset_session()
+    except Exception as e:
+        print(f"Error resetting MATRIX state: {e}")
+
+    # Broadcast state for the active mode
+    if mode == "MATRIX":
+        await matrix_game.broadcast_state()
+    elif mode == "HUMMING":
+        await humming_game.broadcast_state()
+    else:
+        await game.broadcast_state()
+        
+    return {"message": f"Game mode set to {mode}", "game_mode": mode}
+
 @router.post("/force-cancel")
 async def force_cancel():
     """Force cancel the round and return to WAITING state."""
     await game.force_cancel()
     return {"message": "Round cancelled"}
+
+
+@router.post("/select-team/{team_id}")
+async def select_team(team_id: str):
+    """Set the selected team in WAITING state to show on the display screen."""
+    team_val = team_id if team_id != "none" else None
+    game.selected_team_id = team_val
+    
+    from humming_game_state import humming_game
+    humming_game.selected_team_id = team_val
+    
+    if game.active_game_mode == "HUMMING":
+        await humming_game.broadcast_state()
+    else:
+        await game.broadcast_state()
+        
+    return {"status": "ok"}

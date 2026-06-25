@@ -5,7 +5,7 @@ import os
 import time
 import asyncio
 from typing import Optional, List
-from database import get_db
+from database import get_db, ensure_default_teams
 from websocket_manager import manager
 from models import TimerInfo, TeamResponse
 from game_state import game as main_game_state
@@ -70,10 +70,13 @@ class MatrixGameStateMachine:
         self.matrix = matrix
 
     async def get_full_state(self) -> dict:
+        if self.session_id:
+            await ensure_default_teams(self.session_id)
         db = await get_db()
         try:
             teams = []
             if self.session_id:
+
                 async with db.execute(
                     "SELECT * FROM teams WHERE session_id = ? ORDER BY play_order",
                     (self.session_id,)
@@ -93,6 +96,8 @@ class MatrixGameStateMachine:
                 "teams": [t.model_dump() for t in teams],
                 "matrix": self.matrix,
                 "show_intro": main_game_state.show_intro,
+                "show_rules": main_game_state.show_rules,
+                "show_scoreboard": main_game_state.show_scoreboard,
             }
         finally:
             await db.close()
@@ -132,7 +137,8 @@ class MatrixGameStateMachine:
 
     async def start_phase_1(self):
         self.state = "PHASE_1"
-        duration = 30
+        main_game_state.active_game_mode = "MATRIX"
+        duration = 10
         self.timer_info = TimerInfo(start_time=time.time(), duration=duration, type="phase1")
         await self.broadcast_state()
         
@@ -143,7 +149,7 @@ class MatrixGameStateMachine:
     async def start_phase_2(self):
         self.state = "PHASE_2"
         # Auto advance after 30s
-        duration = 30
+        duration = 40
         self.timer_info = TimerInfo(start_time=time.time(), duration=duration, type="phase2")
         await self.broadcast_state()
         
@@ -153,7 +159,7 @@ class MatrixGameStateMachine:
 
     async def start_phase_3(self):
         self.state = "PHASE_3"
-        duration = 30
+        duration = 40
         self.timer_info = TimerInfo(start_time=time.time(), duration=duration, type="phase3")
         await self.broadcast_state()
         

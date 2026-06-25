@@ -21,13 +21,13 @@ Hệ thống điều khiển và trình chiếu trò chơi "Đoán Từ Khóa Đ
 Yêu cầu: Python 3.10+
 ```bash
 cd backend
-python -m venv venv
+python3 -m venv venv
 # Active venv (Windows)
 .\venv\Scripts\activate
 # Active venv (Mac/Linux)
 source venv/bin/activate
 
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 uvicorn main:app --port 8000 --reload
 ```
 API Documentation: `http://localhost:8000/docs`

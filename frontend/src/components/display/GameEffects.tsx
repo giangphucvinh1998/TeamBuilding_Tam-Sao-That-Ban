@@ -28,7 +28,7 @@ export default function GameEffects({ effectData }: { effectData: any }) {
         confetti({ ...defaults, particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } });
       }, 250);
 
-    } else if (effect === 'wrong') {
+    } else if (effect === 'wrong' || effect === 'wrong_deduct') {
       sounds.playWrong();
       
       // Trigger a body shake by adding/removing class

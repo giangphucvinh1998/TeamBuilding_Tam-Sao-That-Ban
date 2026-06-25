@@ -3,6 +3,8 @@
 import os
 import uuid
 import shutil
+import csv
+import io
 from fastapi import APIRouter, HTTPException, UploadFile, File
 from database import get_db
 from models import SongCreate, SongUpdate, SongResponse
@@ -38,9 +40,9 @@ async def create_song(request: SongCreate, session_id: str):
     db = await get_db()
     try:
         await db.execute(
-            """INSERT INTO songs (id, session_id, title, media_url, original_filename, hint, is_final_live)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (song_id, session_id, request.title, request.media_url, request.original_filename,
+            """INSERT INTO songs (id, session_id, team_id, title, media_url, original_filename, hint, is_final_live)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (song_id, session_id, request.team_id, request.title, request.media_url, request.original_filename,
              request.hint, 1 if request.is_final_live else 0)
         )
         await db.commit()
@@ -48,7 +50,7 @@ async def create_song(request: SongCreate, session_id: str):
         async with db.execute("SELECT * FROM songs WHERE id = ?", (song_id,)) as cursor:
             row = await cursor.fetchone()
             return SongResponse(
-                id=row["id"], session_id=row["session_id"], title=row["title"],
+                id=row["id"], session_id=row["session_id"], team_id=row["team_id"], title=row["title"],
                 media_url=row["media_url"], original_filename=row["original_filename"],
                 hint=row["hint"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
             )
@@ -64,7 +66,7 @@ async def list_songs(session_id: str):
         async with db.execute("SELECT * FROM songs WHERE session_id = ?", (session_id,)) as cursor:
             rows = await cursor.fetchall()
             return [SongResponse(
-                id=row["id"], session_id=row["session_id"], title=row["title"],
+                id=row["id"], session_id=row["session_id"], team_id=row["team_id"], title=row["title"],
                 media_url=row["media_url"], original_filename=row["original_filename"],
                 hint=row["hint"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
             ) for row in rows]
@@ -99,7 +101,7 @@ async def update_song(song_id: str, request: SongUpdate):
             if not row:
                 raise HTTPException(status_code=404, detail="Song not found")
             return SongResponse(
-                id=row["id"], session_id=row["session_id"], title=row["title"],
+                id=row["id"], session_id=row["session_id"], team_id=row["team_id"], title=row["title"],
                 media_url=row["media_url"], original_filename=row["original_filename"],
                 hint=row["hint"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
             )
@@ -115,5 +117,79 @@ async def delete_song(song_id: str):
         await db.execute("DELETE FROM songs WHERE id = ?", (song_id,))
         await db.commit()
         return {"message": "Song deleted"}
+    finally:
+        await db.close()
+
+
+@router.post("/sessions/{session_id}/import")
+async def import_songs(session_id: str, file: UploadFile = File(...)):
+    """Import songs from a CSV file."""
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Chỉ hỗ trợ file CSV")
+
+    content = await file.read()
+    decoded = content.decode("utf-8-sig")  # utf-8-sig handles BOM
+    reader = csv.reader(io.StringIO(decoded))
+    
+    rows = list(reader)
+    if not rows:
+        raise HTTPException(status_code=400, detail="File CSV trống")
+
+    # Skip header if it exists (check if first row contains column headers)
+    if any(h in rows[0][0] or h in rows[0][1] for h in ["STT", "Đội", "Tên", "Bài"]):
+        rows = rows[1:]
+
+    db = await get_db()
+    try:
+        # Load existing teams for matching
+        async with db.execute("SELECT id, name FROM teams WHERE session_id = ?", (session_id,)) as cursor:
+            team_rows = await cursor.fetchall()
+            teams_map = {r["name"].strip().lower(): r["id"] for r in team_rows}
+
+        count = 0
+        for row in rows:
+            if len(row) < 3:
+                continue # Skip invalid rows
+            
+            raw_team = row[1].strip()
+            raw_title = row[2].strip()
+            if not raw_title:
+                continue
+                
+            raw_hint = row[3].strip() if len(row) > 3 else ""
+            raw_type = row[4].strip().lower() if len(row) > 4 else "media"
+            raw_filename = row[5].strip() if len(row) > 5 else ""
+
+            # Match team ID
+            team_id = teams_map.get(raw_team.lower())
+            if not team_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Không tìm thấy đội '{raw_team}' trong phiên chơi. Vui lòng kiểm tra lại tên đội trong CSV."
+                )
+
+            song_id = str(uuid.uuid4())
+            is_final_live = 1 if "live" in raw_type else 0
+            
+            # Match existing uploaded file if filename matches
+            media_url = ""
+            if raw_filename:
+                async with db.execute(
+                    "SELECT media_url FROM songs WHERE session_id = ? AND original_filename = ? AND media_url != '' LIMIT 1",
+                    (session_id, raw_filename)
+                ) as cursor:
+                    match_row = await cursor.fetchone()
+                    if match_row:
+                        media_url = match_row["media_url"]
+
+            await db.execute(
+                """INSERT INTO songs (id, session_id, team_id, title, media_url, original_filename, hint, is_final_live)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (song_id, session_id, team_id, raw_title, media_url, raw_filename, raw_hint, is_final_live)
+            )
+            count += 1
+
+        await db.commit()
+        return {"message": f"Import thành công {count} bài hát", "count": count}
     finally:
         await db.close()

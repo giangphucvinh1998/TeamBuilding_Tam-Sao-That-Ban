@@ -14,6 +14,25 @@ from routers import auth, sessions, teams, keywords, game, songs, humming, matri
 async def lifespan(app: FastAPI):
     """Initialize database on startup."""
     await init_db()
+    # Restore active session if it exists in DB
+    from database import get_db
+    from game_state import game as main_game
+    from humming_game_state import humming_game
+    from matrix_game_state import matrix_game
+    db = await get_db()
+    try:
+        async with db.execute("SELECT id FROM sessions WHERE status = 'ACTIVE' LIMIT 1") as cursor:
+            row = await cursor.fetchone()
+            if row:
+                active_session_id = row["id"]
+                print(f"Restoring active session: {active_session_id}")
+                await main_game.set_session(active_session_id)
+                await humming_game.set_session(active_session_id)
+                await matrix_game.set_session(active_session_id)
+    except Exception as e:
+        print(f"Error restoring active session: {e}")
+    finally:
+        await db.close()
     yield
 
 
@@ -62,8 +81,13 @@ async def websocket_admin_endpoint(websocket: WebSocket):
             elif matrix_game.state != "WAITING":
                 state_data = await matrix_game.get_full_state()
             else:
-                # Default to main game if all are WAITING
-                state_data = await game.get_full_state()
+                # Default based on active_game_mode if all are WAITING
+                if game.active_game_mode == "MATRIX":
+                    state_data = await matrix_game.get_full_state()
+                elif game.active_game_mode == "HUMMING":
+                    state_data = await humming_game.get_full_state()
+                else:
+                    state_data = await game.get_full_state()
                 
             await websocket.send_json({"type": "state_update", "data": state_data})
             await asyncio.sleep(1) # Send regular updates to keep alive
@@ -87,7 +111,12 @@ async def websocket_display_endpoint(websocket: WebSocket):
             elif matrix_game.state != "WAITING":
                 state_data = await matrix_game.get_full_state()
             else:
-                state_data = await game.get_full_state()
+                if game.active_game_mode == "MATRIX":
+                    state_data = await matrix_game.get_full_state()
+                elif game.active_game_mode == "HUMMING":
+                    state_data = await humming_game.get_full_state()
+                else:
+                    state_data = await game.get_full_state()
                 
             await websocket.send_json({"type": "state_update", "data": state_data})
             await asyncio.sleep(1)

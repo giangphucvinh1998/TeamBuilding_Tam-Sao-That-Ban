@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS rounds (
 CREATE TABLE IF NOT EXISTS songs (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    team_id TEXT REFERENCES teams(id),
     title TEXT NOT NULL,
     media_url TEXT NOT NULL,
     original_filename TEXT DEFAULT '',
@@ -107,7 +108,37 @@ async def init_db():
             await db.execute("ALTER TABLE songs ADD COLUMN original_filename TEXT DEFAULT '';")
         except aiosqlite.OperationalError:
             pass # Column likely already exists
+
+        # Safe migration for team_id in songs
+        try:
+            await db.execute("ALTER TABLE songs ADD COLUMN team_id TEXT REFERENCES teams(id);")
+        except aiosqlite.OperationalError:
+            pass # Column likely already exists
             
         await db.commit()
     finally:
         await db.close()
+
+
+async def ensure_default_teams(session_id: str):
+    """Ensure that default teams are seeded in the database for the session."""
+    import uuid
+    db = await get_db()
+    try:
+        async with db.execute(
+            "SELECT COUNT(*) as cnt FROM teams WHERE session_id = ?",
+            (session_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row and row["cnt"] == 0:
+                default_teams = ["XANH BIỂN", "XANH NGỌC", "XANH LÁ", "TIM TÍM", "ĐO ĐỎ"]
+                for idx, team_name in enumerate(default_teams):
+                    team_id = str(uuid.uuid4())
+                    await db.execute(
+                        "INSERT INTO teams (id, session_id, name, member_count, play_order) VALUES (?, ?, ?, ?, ?)",
+                        (team_id, session_id, team_name, 5, idx + 1)
+                    )
+                await db.commit()
+    finally:
+        await db.close()
+

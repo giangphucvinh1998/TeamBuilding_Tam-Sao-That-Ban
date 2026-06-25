@@ -4,7 +4,7 @@ import time
 import uuid
 import asyncio
 from typing import Optional, Dict
-from database import get_db
+from database import get_db, ensure_default_teams
 from websocket_manager import manager
 from models import GameState, TimerInfo, TeamResponse, SongResponse
 from game_state import game as main_game_state
@@ -27,9 +27,12 @@ class HummingGameStateMachine:
         # Humming specific
         self.is_media_playing: bool = False
         self.is_final_live: bool = False
+        self.selected_team_id: Optional[str] = None
 
     async def get_full_state(self) -> dict:
         """Get the full current game state for Humming mode."""
+        if self.session_id:
+            await ensure_default_teams(self.session_id)
         db = await get_db()
         try:
             teams = []
@@ -40,9 +43,26 @@ class HummingGameStateMachine:
                 ) as cursor:
                     rows = await cursor.fetchall()
                     for row in rows:
+                        # Count keywords played by this team
+                        async with db.execute(
+                            "SELECT COUNT(*) as cnt FROM rounds WHERE session_id = ? AND team_id = ? AND state = 'FINISHED'",
+                            (self.session_id, row["id"])
+                        ) as count_cursor:
+                            count_row = await count_cursor.fetchone()
+                            completed_rounds = count_row["cnt"] if count_row else 0
+                            
+                        # Count songs played by this team
+                        async with db.execute(
+                            "SELECT COUNT(*) as cnt FROM humming_rounds WHERE session_id = ? AND team_id = ? AND state = 'FINISHED'",
+                            (self.session_id, row["id"])
+                        ) as song_cursor:
+                            song_row = await song_cursor.fetchone()
+                            completed_songs = song_row["cnt"] if song_row else 0
+
                         teams.append(TeamResponse(
                             id=row["id"], session_id=row["session_id"], name=row["name"],
                             member_count=row["member_count"], score=row["score"], play_order=row["play_order"],
+                            completed_rounds=completed_rounds, completed_songs=completed_songs
                         ))
 
             current_song = None
@@ -55,7 +75,8 @@ class HummingGameStateMachine:
                         current_song = SongResponse(
                             id=row["id"], session_id=row["session_id"], title=row["title"],
                             media_url=row["media_url"], original_filename=row["original_filename"],
-                            hint=row["hint"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
+                            hint=row["hint"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"]),
+                            team_id=row["team_id"]
                         )
 
             current_team = None
@@ -77,9 +98,12 @@ class HummingGameStateMachine:
                 "hint_visible": self.hint_visible,
                 "steal_active": self.steal_active,
                 "show_intro": main_game_state.show_intro,
+                "show_rules": main_game_state.show_rules,
+                "show_scoreboard": main_game_state.show_scoreboard,
                 # Additional fields for display
                 "is_media_playing": self.is_media_playing,
                 "is_final_live": self.is_final_live,
+                "selected_team_id": self.selected_team_id,
             }
         finally:
             await db.close()
@@ -99,8 +123,8 @@ class HummingGameStateMachine:
 
             if not song:
                 raise ValueError("Song not found")
-            if song["is_used"]:
-                raise ValueError("Song has already been used")
+            if song["team_id"] and song["team_id"] != team_id:
+                raise ValueError("Bài hát không thuộc về đội thi đấu được chọn")
 
             await db.execute("UPDATE songs SET is_used = 1 WHERE id = ?", (song["id"],))
 
@@ -123,6 +147,7 @@ class HummingGameStateMachine:
             self.current_song_id = song["id"]
             self.current_round_id = round_id
             self.state = GameState.READY
+            main_game_state.active_game_mode = "HUMMING"
             self.hint_visible = False
             self.steal_active = False
             self.is_final_live = bool(song["is_final_live"])
@@ -344,6 +369,7 @@ class HummingGameStateMachine:
         self.hint_visible = False
         self.steal_active = False
         self.is_media_playing = False
+        self.selected_team_id = None
 
         await self.broadcast_state()
 
@@ -357,6 +383,7 @@ class HummingGameStateMachine:
         self.hint_visible = False
         self.steal_active = False
         self.is_media_playing = False
+        self.selected_team_id = None
 
         if self._timer_task:
             self._timer_task.cancel()
@@ -376,6 +403,7 @@ class HummingGameStateMachine:
         self.hint_visible = False
         self.steal_active = False
         self.is_media_playing = False
+        self.selected_team_id = None
 
         if self._timer_task:
             self._timer_task.cancel()

@@ -66,6 +66,8 @@ class TeamResponse(BaseModel):
     score: int
     play_order: int
     created_at: Optional[str] = None
+    completed_rounds: int = 0
+    completed_songs: int = 0
 
 
 # --- Keyword ---
@@ -111,6 +113,10 @@ class StealRequest(BaseModel):
     correct: bool
 
 
+class PlayPauseRequest(BaseModel):
+    play: bool
+
+
 # --- WebSocket Messages ---
 
 class WSMessage(BaseModel):
@@ -126,6 +132,7 @@ class SongCreate(BaseModel):
     original_filename: str = ""
     hint: str = ""
     is_final_live: bool = False
+    team_id: Optional[str] = None
 
 class SongUpdate(BaseModel):
     title: Optional[str] = None
@@ -134,6 +141,7 @@ class SongUpdate(BaseModel):
     hint: Optional[str] = None
     is_final_live: Optional[bool] = None
     is_used: Optional[bool] = None
+    team_id: Optional[str] = None
 
 class SongResponse(BaseModel):
     id: str
@@ -144,6 +152,7 @@ class SongResponse(BaseModel):
     hint: str
     is_used: bool
     is_final_live: bool
+    team_id: Optional[str] = None
 
 
 # --- Matrix Game ---
@@ -180,3 +189,6 @@ class GameStateResponse(BaseModel):
     hint_visible: bool = False
     steal_active: bool = False
     show_intro: bool = False
+    show_rules: bool = False
+    show_scoreboard: bool = False
+    selected_team_id: Optional[str] = None

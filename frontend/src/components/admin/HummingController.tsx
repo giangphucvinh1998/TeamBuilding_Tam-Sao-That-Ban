@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 
 export default function HummingController({ sessionId, gameState }: { sessionId: string, gameState: any }) {
+  const isCurrentGameActive = gameState?.game_mode === 'HUMMING';
+  const state = isCurrentGameActive ? gameState?.state : 'WAITING';
+
   const [songs, setSongs] = useState<any[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [selectedSong, setSelectedSong] = useState<string>('');
@@ -14,6 +17,15 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
         api.post(`/humming/set-session/${sessionId}`).catch(console.error);
     }
   }, [sessionId]);
+
+  // Auto select first team if waiting and not selected
+  useEffect(() => {
+    if (state === 'WAITING' && !selectedTeam && gameState?.teams?.length > 0) {
+      const firstTeamId = gameState.teams[0].id;
+      setSelectedTeam(firstTeamId);
+      api.post(`/game/select-team/${firstTeamId}`).catch(console.error);
+    }
+  }, [state, selectedTeam, gameState?.teams]);
 
   const fetchSongs = async () => {
     try {
@@ -73,21 +85,37 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
   };
 
   if (!gameState) return <div className="p-8 text-center text-gray-500">Connecting to game server...</div>;
-  if (gameState.game_mode !== 'HUMMING' && gameState.state !== 'WAITING') {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border p-6 text-center text-red-500 font-bold">
-        Một trò chơi khác đang diễn ra. Vui lòng kết thúc trò chơi hiện tại trước khi chuyển sang Giai Điệu Ngân Nga.
-      </div>
-    );
-  }
 
-  const { state, current_team, current_song, teams, is_media_playing, is_final_live } = gameState;
+  const current_team = isCurrentGameActive ? gameState.current_team : null;
+  const current_song = isCurrentGameActive ? gameState.current_song : null;
+  const is_media_playing = isCurrentGameActive ? gameState.is_media_playing : false;
+  const is_final_live = isCurrentGameActive ? gameState.is_final_live : false;
+  const { teams } = gameState;
+  const filteredSongs = selectedTeam 
+    ? songs.filter((s: any) => s.team_id === selectedTeam)
+    : [];
 
   return (
     <div className="p-6 border-2 border-blue-500 rounded-xl bg-card shadow-lg">
       <div className="flex justify-between items-center mb-6 border-b pb-4">
-        <h2 className="text-2xl font-black text-blue-700 uppercase">Điều Khiển: Giai Điệu Ngân Nga</h2>
+        <h2 className="text-2xl font-black text-blue-700 uppercase">Điều Khiển: Giai Điệu Vượt Ngàn</h2>
         <div className="flex items-center gap-4">
+          <button
+            onClick={async () => {
+              try {
+                await api.post('/game/toggle-rules');
+              } catch (e) {
+                console.error(e);
+              }
+            }}
+            className={`px-4 py-2 font-bold rounded-lg border transition-all shadow-sm ${
+              gameState?.show_rules
+                ? 'bg-purple-600 border-purple-500 text-white animate-pulse'
+                : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-300'
+            }`}
+          >
+            📜 {gameState?.show_rules ? 'ẨN LUẬT CHƠI' : 'HIỆN LUẬT CHƠI'}
+          </button>
           <div className="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg">Trạng thái: <span className="text-blue-600">{state}</span></div>
           {state !== 'WAITING' && (
             <button 
@@ -113,7 +141,12 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
               <select 
                 className="w-full p-4 border rounded-lg text-lg font-medium shadow-sm focus:border-blue-500 outline-none"
                 value={selectedTeam}
-                onChange={(e) => setSelectedTeam(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSelectedTeam(value);
+                  setSelectedSong('');
+                  api.post(`/game/select-team/${value || 'none'}`).catch(console.error);
+                }}
               >
                 <option value="">-- Chọn Đội --</option>
                 {teams?.map((t: any) => (
@@ -137,27 +170,36 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
           {/* Songs Column */}
           <div className="border rounded-lg p-4 bg-gray-50 flex flex-col max-h-[500px]">
             <h3 className="text-lg font-bold mb-2 text-blue-800">2. Chọn Bài Hát</h3>
-            <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 gap-2">
-              {songs?.map((s: any, index: number) => (
-                <button
-                  key={s.id}
-                  disabled={s.is_used}
-                  onClick={() => setSelectedSong(s.id)}
-                  className={`text-left p-3 rounded border flex items-center justify-between transition-colors
-                    ${s.is_used ? 'bg-gray-200 text-gray-500 cursor-not-allowed opacity-60' 
-                      : selectedSong === s.id ? 'bg-blue-100 border-blue-500 shadow-sm' 
-                      : 'bg-white hover:bg-blue-50 border-gray-200'}`}
-                >
-                  <div className="font-bold flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs">{index + 1}</span>
-                    <span className="truncate max-w-[200px]">{s.title}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {s.is_final_live && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded font-bold">LIVE CUỐI</span>}
-                    {s.is_used && <span className="text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded font-bold">Đã Dùng</span>}
-                  </div>
-                </button>
-              ))}
+            <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 gap-2 flex items-center justify-center">
+              {!selectedTeam ? (
+                <div className="text-center py-8 text-gray-500 font-medium text-sm">
+                  👈 Vui lòng chọn Đội thi đấu trước để chọn bài hát tương ứng.
+                </div>
+              ) : filteredSongs.length === 0 ? (
+                <div className="text-center py-8 text-red-500 font-semibold text-sm">
+                  Không có bài hát nào được gán cho đội này. Vui lòng vào mục Quản lý bài hát để thêm hoặc import CSV!
+                </div>
+              ) : (
+                filteredSongs.map((s: any, index: number) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSelectedSong(s.id)}
+                    className={`text-left p-3 rounded border flex items-center justify-between transition-colors w-full
+                      ${selectedSong === s.id ? 'bg-blue-100 border-blue-500 shadow-sm' 
+                        : s.is_used ? 'bg-gray-200 text-gray-500 opacity-60' 
+                        : 'bg-white hover:bg-blue-50 border-gray-200'}`}
+                  >
+                    <div className="font-bold flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs">{index + 1}</span>
+                      <span className="truncate max-w-[200px]">{s.title}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {s.is_final_live && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded font-bold">LIVE CUỐI</span>}
+                      {s.is_used && <span className="text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded font-bold">Đã Dùng</span>}
+                    </div>
+                  </button>
+                ))
+              )}
             </div>
           </div>
         </div>

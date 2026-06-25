@@ -6,7 +6,7 @@ interface MatrixControllerProps {
   gameState: any;
 }
 
-export default function MatrixController({ sessionId, gameState }: MatrixControllerProps) {
+export default function MatrixController({ sessionId: _, gameState }: MatrixControllerProps) {
   const [teamScores, setTeamScores] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -28,13 +28,6 @@ export default function MatrixController({ sessionId, gameState }: MatrixControl
   }, [gameState?.state]);
 
   if (!gameState) return <div className="p-8 text-center text-gray-500">Connecting to game server...</div>;
-  if (gameState.game_mode !== 'MATRIX' && gameState.state !== 'WAITING') {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border p-6 text-center text-red-500 font-bold">
-        Một trò chơi khác đang diễn ra. Vui lòng kết thúc trò chơi hiện tại trước khi chuyển sang Mò Kim Bể Chữ.
-      </div>
-    );
-  }
 
   const { state, timer, teams } = gameState;
 
@@ -70,6 +63,22 @@ export default function MatrixController({ sessionId, gameState }: MatrixControl
       <div className="flex justify-between items-center mb-6 border-b pb-4">
         <h2 className="text-2xl font-black text-green-700 uppercase">Điều Khiển: Mò Kim Bể Chữ</h2>
         <div className="flex items-center gap-4">
+          <button
+            onClick={async () => {
+              try {
+                await api.post('/game/toggle-rules');
+              } catch (e) {
+                console.error(e);
+              }
+            }}
+            className={`px-4 py-2 font-bold rounded-lg border transition-all shadow-sm ${
+              gameState?.show_rules
+                ? 'bg-purple-600 border-purple-500 text-white animate-pulse'
+                : 'bg-purple-500 hover:bg-purple-600 text-white border-purple-400'
+            }`}
+          >
+            📜 {gameState?.show_rules ? 'ẨN LUẬT CHƠI' : 'HIỆN LUẬT CHƠI'}
+          </button>
           <div className="text-lg font-bold bg-gray-100 px-4 py-2 rounded-lg">Trạng thái: <span className="text-green-600">{state}</span></div>
           {state !== 'WAITING' && (
             <button 

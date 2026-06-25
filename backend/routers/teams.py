@@ -2,7 +2,7 @@
 
 import uuid
 from fastapi import APIRouter, HTTPException
-from database import get_db
+from database import get_db, ensure_default_teams
 from models import TeamCreate, TeamUpdate, TeamResponse
 
 router = APIRouter(prefix="/api", tags=["teams"])
@@ -11,6 +11,7 @@ router = APIRouter(prefix="/api", tags=["teams"])
 @router.get("/sessions/{session_id}/teams", response_model=list[TeamResponse])
 async def list_teams(session_id: str):
     """List all teams in a session."""
+    await ensure_default_teams(session_id)
     db = await get_db()
     try:
         async with db.execute(
@@ -18,6 +19,7 @@ async def list_teams(session_id: str):
             (session_id,)
         ) as cursor:
             rows = await cursor.fetchall()
+
             return [TeamResponse(
                 id=row["id"], session_id=row["session_id"],
                 name=row["name"], member_count=row["member_count"],

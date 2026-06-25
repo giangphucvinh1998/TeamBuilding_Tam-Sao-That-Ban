@@ -20,6 +20,54 @@ async def list_keywords(session_id: str):
             (session_id,)
         ) as cursor:
             rows = await cursor.fetchall()
+            if not rows:
+                # Auto-seed the 20 default keywords for the 5 teams
+                default_keywords = [
+                    # Xanh biển
+                    ("Ngủ gật", "[Xanh biển] trạng thái của con người", "trạng thái của con người"),
+                    ("Khủng long", "[Xanh biển] loài động vật", "loài động vật"),
+                    ("Uống nước nhớ nguồn", "[Xanh biển] biết ơn tổ tiên", "biết ơn tổ tiên"),
+                    ("Ném đá giấu tay", "[Xanh biển] hãm hại người khác", "hãm hại người khác"),
+                    # Xanh ngọc
+                    ("Vỗ tay", "[Xanh ngọc] hành động của con người", "hành động của con người"),
+                    ("Sóng thần", "[Xanh ngọc] hiện tượng tự nhiên", "hiện tượng tự nhiên"),
+                    ("Giận cá chém thớt", "[Xanh ngọc] trút cơn bực tức", "trút cơn bực tức"),
+                    ("Cưỡi ngựa xem hoa", "[Xanh ngọc] hời hợt, qua loa", "hời hợt, qua loa"),
+                    # Xanh lá
+                    ("Ôm nhau", "[Xanh lá] hành động của con người", "hành động của con người"),
+                    ("Xe tăng", "[Xanh lá] phương tiện", "phương tiện"),
+                    ("Chân lấm tay bùn", "[Xanh lá] vất vả cực nhọc", "vất vả cực nhọc"),
+                    ("Tre già măng mọc", "[Xanh lá] quy luật thế hệ", "quy luật thế hệ"),
+                    # Tim tím
+                    ("Chạy bộ", "[Tim tím] hành động của con người", "hành động của con người"),
+                    ("Động đất", "[Tim tím] hiện tượng tự nhiên", "hiện tượng tự nhiên"),
+                    ("Cá lớn nuốt cá bé", "[Tim tím] quy luật mạnh yếu", "quy luật mạnh yếu"),
+                    ("Nước chảy đá mòn", "[Tim tím] kiên trì, nhẫn nại", "kiên trì, nhẫn nại"),
+                    # Đo đỏ
+                    ("Khóc lóc", "[Đo đỏ] hành động của con người", "hành động của con người"),
+                    ("Tàu ngầm", "[Đo đỏ] phương tiện", "phương tiện"),
+                    ("Một vốn bốn lời", "[Đo đỏ] đầu tư, kinh doanh", "đầu tư, kinh doanh"), # Wait, "Một vốn bốn lời"
+                    ("Há miệng chờ sung", "[Đo đỏ] lười biếng, thụ động", "lười biếng, thụ động"),
+                ]
+                # Fix "Một vốn *(bốn lời)*" from the user screenshot if they want exactly "Một vốn bốn lời"
+                # Let's check the user prompt: "Một vốn bốn lời (đầu tư, kinh doanh)"
+                # Yes, let's use "Một vốn bốn lời"
+                default_keywords[18] = ("Một vốn bốn lời", "[Đo đỏ] đầu tư, kinh doanh", "đầu tư, kinh doanh")
+                
+                for kw, ans, hnt in default_keywords:
+                    keyword_id = str(uuid.uuid4())
+                    await db.execute(
+                        "INSERT INTO keywords (id, session_id, keyword, answer, hint) VALUES (?, ?, ?, ?, ?)",
+                        (keyword_id, session_id, kw, ans, hnt)
+                    )
+                await db.commit()
+                # Query again
+                async with db.execute(
+                    "SELECT * FROM keywords WHERE session_id = ? ORDER BY rowid",
+                    (session_id,)
+                ) as cursor2:
+                    rows = await cursor2.fetchall()
+
             return [KeywordResponse(
                 id=row["id"], session_id=row["session_id"],
                 keyword=row["keyword"], answer=row["answer"],

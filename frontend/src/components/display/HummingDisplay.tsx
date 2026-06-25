@@ -1,10 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import Timer from '@/components/display/Timer';
 import Scoreboard from '@/components/display/Scoreboard';
+import { api } from '@/lib/api';
 
 export default function HummingDisplay({ gameState, effectData }: { gameState: any, effectData: any }) {
-  const { state, current_team, current_song, teams, is_media_playing, is_final_live, timer, steal_active, hint_visible } = gameState;
+  const { state, current_song, teams, is_media_playing, is_final_live, timer } = gameState;
   const mediaRef = useRef<HTMLVideoElement>(null);
+
+  const handleMediaEnded = () => {
+    api.post('/humming/play-pause', { play: false }).catch(console.error);
+  };
 
   useEffect(() => {
     if (mediaRef.current) {
@@ -16,14 +21,13 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
     }
   }, [is_media_playing, current_song?.media_url]);
 
-  const isAudio = current_song?.media_url?.match(/\.(mp3|wav|m4a|aac)$/i);
   const isVideo = current_song?.media_url?.match(/\.(mp4|mov|webm)$/i);
 
   if (state === 'WAITING') {
     return (
       <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10">
         <h2 className="text-6xl font-black mb-16 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)] tracking-widest">
-          GIAI ĐIỆU NGÂN NGA
+          GIAI ĐIỆU VƯỢT NGÀN
         </h2>
         {teams && teams.length > 0 && <Scoreboard teams={teams} />}
       </div>
@@ -36,7 +40,7 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
       {/* Media Player (Only for audio) */}
       {!is_final_live && current_song && !isVideo && (
         <div className="absolute opacity-0 pointer-events-none">
-           <video ref={mediaRef} src={current_song.media_url} loop playsInline className="w-px h-px" />
+           <video ref={mediaRef} src={current_song.media_url} playsInline onEnded={handleMediaEnded} className="w-px h-px" />
         </div>
       )}
 
@@ -54,7 +58,7 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
             </div>
           ) : isVideo ? (
              <div className="relative w-full max-w-5xl aspect-video rounded-3xl overflow-hidden border-[12px] border-blue-500 shadow-[0_0_50px_rgba(59,130,246,0.6)]">
-               <video src={current_song.media_url} className="w-full h-full object-cover" autoPlay={is_media_playing} loop muted={false} ref={mediaRef} playsInline />
+               <video src={current_song.media_url} className="w-full h-full object-cover" autoPlay={is_media_playing} muted={false} ref={mediaRef} playsInline onEnded={handleMediaEnded} />
              </div>
           ) : (
             <div className="relative w-[32rem] h-[32rem]">
