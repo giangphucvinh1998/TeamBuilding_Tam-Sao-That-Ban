@@ -25,6 +25,7 @@ class GameStateMachine:
         self.show_intro: bool = False
         self.show_rules: bool = False
         self.show_scoreboard: bool = False
+        self.show_speech: bool = False
         self.active_game_mode: str = "MATRIX"
         self._timer_task: Optional[asyncio.Task] = None
         self.selected_team_id: Optional[str] = None
@@ -113,6 +114,7 @@ class GameStateMachine:
                 "show_intro": self.show_intro,
                 "show_rules": self.show_rules,
                 "show_scoreboard": self.show_scoreboard,
+                "show_speech": self.show_speech,
                 "selected_team_id": self.selected_team_id,
             }
         finally:
@@ -127,6 +129,18 @@ class GameStateMachine:
         """Toggle the intro video."""
         self.show_intro = not self.show_intro
         await self.broadcast_state()
+
+    async def toggle_speech(self):
+        """Toggle the speech background image."""
+        self.show_speech = not self.show_speech
+        from humming_game_state import humming_game
+        from matrix_game_state import matrix_game
+        if self.active_game_mode == "MATRIX":
+            await matrix_game.broadcast_state()
+        elif self.active_game_mode == "HUMMING":
+            await humming_game.broadcast_state()
+        else:
+            await self.broadcast_state()
 
     async def toggle_rules(self):
         """Toggle the rules overlay."""

@@ -40,10 +40,10 @@ async def create_song(request: SongCreate, session_id: str):
     db = await get_db()
     try:
         await db.execute(
-            """INSERT INTO songs (id, session_id, team_id, title, media_url, original_filename, hint, singer, is_final_live)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO songs (id, session_id, team_id, title, media_url, original_filename, hint, singer, is_final_live, game_version, question_number, question_type)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (song_id, session_id, request.team_id, request.title, request.media_url, request.original_filename,
-             request.hint, request.singer, 1 if request.is_final_live else 0)
+             request.hint, request.singer, 1 if request.is_final_live else 0, request.game_version, request.question_number, request.question_type)
         )
         await db.commit()
 
@@ -52,7 +52,8 @@ async def create_song(request: SongCreate, session_id: str):
             return SongResponse(
                 id=row["id"], session_id=row["session_id"], team_id=row["team_id"], title=row["title"],
                 media_url=row["media_url"], original_filename=row["original_filename"],
-                hint=row["hint"], singer=row["singer"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
+                hint=row["hint"], singer=row["singer"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"]),
+                game_version=row["game_version"], question_number=row["question_number"], question_type=row["question_type"]
             )
     finally:
         await db.close()
@@ -68,7 +69,8 @@ async def list_songs(session_id: str):
             return [SongResponse(
                 id=row["id"], session_id=row["session_id"], team_id=row["team_id"], title=row["title"],
                 media_url=row["media_url"], original_filename=row["original_filename"],
-                hint=row["hint"], singer=row["singer"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
+                hint=row["hint"], singer=row["singer"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"]),
+                game_version=row["game_version"], question_number=row["question_number"], question_type=row["question_type"]
             ) for row in rows]
     finally:
         await db.close()
@@ -103,7 +105,8 @@ async def update_song(song_id: str, request: SongUpdate):
             return SongResponse(
                 id=row["id"], session_id=row["session_id"], team_id=row["team_id"], title=row["title"],
                 media_url=row["media_url"], original_filename=row["original_filename"],
-                hint=row["hint"], singer=row["singer"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"])
+                hint=row["hint"], singer=row["singer"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"]),
+                game_version=row["game_version"], question_number=row["question_number"], question_type=row["question_type"]
             )
     finally:
         await db.close()
@@ -147,6 +150,7 @@ async def import_songs(session_id: str, file: UploadFile = File(...)):
             teams_map = {r["name"].strip().lower(): r["id"] for r in team_rows}
 
         count = 0
+        v2_question_counts = {}
         for row in rows:
             if len(row) < 3:
                 continue # Skip invalid rows
@@ -170,8 +174,36 @@ async def import_songs(session_id: str, file: UploadFile = File(...)):
                 )
 
             song_id = str(uuid.uuid4())
-            is_final_live = 1 if "live" in raw_type else 0
             
+            # Determine game_version, question_type, and question_number dynamically from raw_type
+            raw_type_lower = raw_type.lower()
+            if "v2" in raw_type_lower or "beat" in raw_type_lower or "trực tiếp" in raw_type_lower:
+                game_version = 2
+                is_final_live = 0
+                if "beat" in raw_type_lower:
+                    question_type = "beat"
+                elif "live" in raw_type_lower or "trực tiếp" in raw_type_lower:
+                    question_type = "live"
+                    is_final_live = 1
+                else:
+                    question_type = "humming"
+                
+                if team_id not in v2_question_counts:
+                    async with db.execute(
+                        "SELECT COUNT(*) as cnt FROM songs WHERE session_id = ? AND team_id = ? AND game_version = 2",
+                        (session_id, team_id)
+                    ) as count_cursor:
+                        count_row = await count_cursor.fetchone()
+                        v2_question_counts[team_id] = count_row["cnt"] if count_row else 0
+                
+                v2_question_counts[team_id] += 1
+                question_number = v2_question_counts[team_id]
+            else:
+                game_version = 1
+                question_type = "humming"
+                question_number = 0
+                is_final_live = 1 if "live" in raw_type_lower else 0
+
             # Match existing uploaded file if filename matches
             media_url = ""
             if raw_filename:
@@ -184,9 +216,9 @@ async def import_songs(session_id: str, file: UploadFile = File(...)):
                         media_url = match_row["media_url"]
 
             await db.execute(
-                """INSERT INTO songs (id, session_id, team_id, title, media_url, original_filename, hint, singer, is_final_live)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (song_id, session_id, team_id, raw_title, media_url, raw_filename, raw_hint, raw_singer, is_final_live)
+                """INSERT INTO songs (id, session_id, team_id, title, media_url, original_filename, hint, singer, is_final_live, game_version, question_number, question_type)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (song_id, session_id, team_id, raw_title, media_url, raw_filename, raw_hint, raw_singer, is_final_live, game_version, question_number, question_type)
             )
             count += 1
 

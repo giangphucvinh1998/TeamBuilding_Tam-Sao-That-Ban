@@ -98,6 +98,7 @@ class MatrixGameStateMachine:
                 "show_intro": main_game_state.show_intro,
                 "show_rules": main_game_state.show_rules,
                 "show_scoreboard": main_game_state.show_scoreboard,
+                "show_speech": main_game_state.show_speech,
             }
         finally:
             await db.close()

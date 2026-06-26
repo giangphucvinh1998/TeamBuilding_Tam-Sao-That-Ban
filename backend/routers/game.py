@@ -144,6 +144,12 @@ async def toggle_scoreboard():
     await game.toggle_scoreboard()
     return {"message": "Scoreboard toggled", "show_scoreboard": game.show_scoreboard}
 
+@router.post("/toggle-speech")
+async def toggle_speech():
+    """Toggle the speech background image."""
+    await game.toggle_speech()
+    return {"message": "Speech toggled", "show_speech": game.show_speech}
+
 @router.post("/set-mode/{mode}")
 async def set_game_mode(mode: str):
     """Set the active game mode and reset other game states to WAITING."""

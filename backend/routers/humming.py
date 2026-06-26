@@ -4,12 +4,15 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from humming_game_state import humming_game
 
+from typing import Optional
+
 router = APIRouter(prefix="/api/humming", tags=["humming"])
 
 class StartHummingRoundRequest(BaseModel):
     session_id: str
     team_id: str
-    song_id: str
+    song_id: Optional[str] = None
+    game_version: Optional[int] = 1
 
 class ConfirmAnswerRequest(BaseModel):
     correct: bool
@@ -34,7 +37,7 @@ async def start_round(request: StartHummingRoundRequest):
     try:
         if humming_game.session_id != request.session_id:
             humming_game.session_id = request.session_id
-        result = await humming_game.start_round(request.team_id, request.song_id)
+        result = await humming_game.start_round(request.team_id, request.song_id, request.game_version)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -140,3 +143,12 @@ async def force_cancel():
     """Force cancel the round and return to WAITING state."""
     await humming_game.force_cancel()
     return {"message": "Round cancelled"}
+
+@router.post("/next-question")
+async def next_question():
+    """Move to next question (Version 2)."""
+    try:
+        await humming_game.next_question()
+        return {"message": "Success"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

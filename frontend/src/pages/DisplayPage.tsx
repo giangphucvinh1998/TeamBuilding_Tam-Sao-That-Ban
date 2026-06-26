@@ -8,6 +8,7 @@ import MatrixDisplay from '@/components/display/MatrixDisplay';
 import game1Audio from '@/assets/game1.mp3';
 import backgroundGame1Audio from '@/assets/background-game1.mp3';
 import backgroundRuleAudio from '@/assets/background-rule-game.mp3';
+import backPhatBieu from '@/assets/back-phat-bieu.jpg';
 
 const TEAM_COLORS: Record<string, string> = {
   'XANH BIỂN': 'text-blue-400',
@@ -35,6 +36,12 @@ export default function DisplayPage() {
       if (videoRef2.current) videoRef2.current.play().catch(e => console.warn("Autoplay blocked:", e));
     }
   }, [gameState?.show_intro]);
+
+  // Preload speech image to prevent lag on toggle
+  useEffect(() => {
+    const img = new Image();
+    img.src = backPhatBieu;
+  }, []);
 
   useEffect(() => {
     const isMatrixActivePhase =
@@ -129,6 +136,11 @@ export default function DisplayPage() {
         {gameState?.show_intro && (
           <video ref={videoRef1} src="/intro.MOV" autoPlay loop playsInline className="fixed inset-0 w-full h-full object-cover z-50 bg-black pointer-events-none" />
         )}
+        {gameState?.show_speech && (
+          <div className="fixed inset-0 z-45 bg-black flex items-center justify-center pointer-events-none">
+            <img src={backPhatBieu} className="w-full h-full object-cover" alt="Back Phat Bieu" />
+          </div>
+        )}
         <h1 className="text-8xl font-black text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 drop-shadow-[0_0_25px_rgba(219,39,119,0.5)] mb-16 tracking-normal py-6 leading-relaxed z-10 relative uppercase">
           {gameState?.game_mode === 'HUMMING' ? 'Giai Điệu Vượt Ngàn' : gameState?.game_mode === 'MATRIX' ? 'Mò Kim Bể Chữ' : 'Mật Mã Lặng Thinh'}
         </h1>
@@ -154,6 +166,11 @@ export default function DisplayPage() {
     <div onClick={handleInteract} className="min-h-screen bg-[#0a0a0f] text-white flex flex-col items-center p-8 overflow-hidden relative cursor-pointer">
       {gameState?.show_intro && (
         <video ref={videoRef2} src="/intro.MOV" autoPlay loop playsInline className="fixed inset-0 w-full h-full object-cover z-50 bg-black pointer-events-none" />
+      )}
+      {gameState?.show_speech && (
+        <div className="fixed inset-0 z-45 bg-black flex items-center justify-center pointer-events-none">
+          <img src={backPhatBieu} className="w-full h-full object-cover" alt="Back Phat Bieu" />
+        </div>
       )}
       <GameEffects effectData={lastEffect} />
       <audio ref={audioRef} src={game1Audio} loop />

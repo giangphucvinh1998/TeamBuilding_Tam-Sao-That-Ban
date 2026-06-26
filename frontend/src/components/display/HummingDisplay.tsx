@@ -16,6 +16,20 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
     }
   };
 
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const video = e.currentTarget;
+    if (gameState.game_version === 2 && state !== 'FINISHED') {
+      const qType = current_song?.question_type;
+      if (qType === 'beat' && video.currentTime >= 10) {
+        video.pause();
+        api.post('/humming/play-pause', { play: false }).catch(console.error);
+      } else if (qType === 'humming' && video.currentTime >= 15) {
+        video.pause();
+        api.post('/humming/play-pause', { play: false }).catch(console.error);
+      }
+    }
+  };
+
   useEffect(() => {
     if (mediaRef.current) {
       if (is_media_playing) {
@@ -49,7 +63,7 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
       {/* Media Player (Only for audio) */}
       {!is_final_live && current_song && !isVideo && (
         <div className="absolute opacity-0 pointer-events-none">
-           <video ref={mediaRef} src={current_song.media_url} playsInline loop={true} onEnded={handleMediaEnded} className="w-px h-px" />
+           <video ref={mediaRef} src={current_song.media_url} playsInline loop={true} onEnded={handleMediaEnded} onTimeUpdate={handleTimeUpdate} className="w-px h-px" />
         </div>
       )}
 
@@ -63,11 +77,13 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
               <div className="w-80 h-80 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-[0_0_50px_rgba(219,39,119,0.5)] border-8 border-purple-300 animate-pulse">
                  <span className="text-8xl">🎤</span>
               </div>
-              <h3 className="text-3xl font-black mt-8 text-pink-400 uppercase tracking-widest drop-shadow-[0_0_10px_rgba(219,39,119,0.8)]">Lượt Live Cuối</h3>
+              <h3 className="text-3xl font-black mt-8 text-pink-400 uppercase tracking-widest drop-shadow-[0_0_10px_rgba(219,39,119,0.8)]">
+                {gameState.game_version === 2 ? 'Lượt Ngân Nga Trực Tiếp' : 'Lượt Live Cuối'}
+              </h3>
             </div>
           ) : isVideo ? (
              <div className="relative w-full max-w-5xl aspect-video rounded-3xl overflow-hidden border-[12px] border-blue-500 shadow-[0_0_50px_rgba(59,130,246,0.6)]">
-               <video src={current_song.media_url} className="w-full h-full object-cover" autoPlay={is_media_playing} muted={false} ref={mediaRef} playsInline loop={true} onEnded={handleMediaEnded} />
+               <video src={current_song.media_url} className="w-full h-full object-cover" autoPlay={is_media_playing} muted={false} ref={mediaRef} playsInline loop={true} onEnded={handleMediaEnded} onTimeUpdate={handleTimeUpdate} />
              </div>
           ) : (
             <div className="relative w-[32rem] h-[32rem]">
@@ -100,7 +116,15 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
             <div>
                <h2 className="text-5xl font-black mb-6 text-blue-400">HÃY LẮNG NGHE!</h2>
                {is_media_playing ? (
-                 <div className="text-3xl text-green-400 animate-pulse font-bold">Đang phát nhạc...</div>
+                 <div className="text-3xl text-green-400 animate-pulse font-bold">
+                   {gameState.game_version === 2 ? (
+                     current_song?.question_type === 'beat' ? 'Đang phát Beat (10s)...' :
+                     current_song?.question_type === 'humming' ? 'Đang phát nhạc ngân nga (15s)...' :
+                     'Đang đếm giờ ngân nga trực tiếp...'
+                   ) : (
+                     'Đang phát nhạc...'
+                   )}
+                 </div>
                ) : (
                  <div className="text-3xl text-gray-400 font-bold">Chờ BTC phát nhạc</div>
                )}
@@ -110,7 +134,13 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
           {state === 'PLAYING' && (
             <div className="w-full">
               <h2 className="text-4xl font-black mb-8 text-yellow-400 uppercase tracking-widest drop-shadow-[0_0_10px_rgba(250,204,21,0.5)] animate-pulse">
-                ĐOÁN TÊN BÀI HÁT
+                {gameState.game_version === 2 ? (
+                  current_song?.question_type === 'beat' ? 'ĐOÁN TÊN BÀI HÁT (BEAT 10S)' :
+                  current_song?.question_type === 'humming' ? 'ĐOÁN TÊN BÀI HÁT (NGÂN NGA 15S)' :
+                  'ĐOÁN TÊN BÀI HÁT (LIVE)'
+                ) : (
+                  'ĐOÁN TÊN BÀI HÁT'
+                )}
               </h2>
               <Timer timerInfo={timer} />
             </div>
@@ -166,6 +196,12 @@ export default function HummingDisplay({ gameState, effectData }: { gameState: a
               <div className="text-5xl font-black text-white mb-8 bg-blue-900/50 px-8 py-4 rounded-2xl border-2 border-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.4)]">
                 {current_song?.title}
               </div>
+              
+              {gameState.game_version === 2 && gameState.reveal_full_player && (
+                <div className="text-2xl text-amber-300 font-bold bg-amber-950/40 border border-amber-500/30 px-6 py-3 rounded-2xl animate-pulse backdrop-blur mb-8 flex items-center gap-3">
+                  <span>{is_media_playing ? '🔊 ĐANG PHÁT FULL BEAT...' : '⏸ ĐÃ TẠM DỪNG BEAT'}</span>
+                </div>
+              )}
               
               {effectData?.effect === 'correct' && (
                 <div className="text-3xl text-white font-bold bg-green-600/30 px-6 py-3 rounded-2xl border border-green-500/50 mb-8 animate-bounce">

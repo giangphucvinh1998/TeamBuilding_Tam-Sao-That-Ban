@@ -29,6 +29,9 @@ class HummingGameStateMachine:
         self.is_final_live: bool = False
         self.selected_team_id: Optional[str] = None
         self.main_answer_correct: Optional[int] = None
+        self.game_version: int = 1
+        self.current_question_number: int = 1
+        self.reveal_full_player: bool = False
 
     async def get_full_state(self) -> dict:
         """Get the full current game state for Humming mode."""
@@ -77,7 +80,7 @@ class HummingGameStateMachine:
                             id=row["id"], session_id=row["session_id"], title=row["title"],
                             media_url=row["media_url"], original_filename=row["original_filename"],
                             hint=row["hint"], singer=row["singer"], is_used=bool(row["is_used"]), is_final_live=bool(row["is_final_live"]),
-                            team_id=row["team_id"]
+                            team_id=row["team_id"], game_version=row["game_version"], question_number=row["question_number"], question_type=row["question_type"]
                         )
 
             current_team = None
@@ -101,11 +104,15 @@ class HummingGameStateMachine:
                 "show_intro": main_game_state.show_intro,
                 "show_rules": main_game_state.show_rules,
                 "show_scoreboard": main_game_state.show_scoreboard,
+                "show_speech": main_game_state.show_speech,
                 # Additional fields for display
                 "is_media_playing": self.is_media_playing,
                 "is_final_live": self.is_final_live,
                 "selected_team_id": self.selected_team_id,
                 "main_answer_correct": self.main_answer_correct,
+                "game_version": self.game_version,
+                "current_question_number": self.current_question_number,
+                "reveal_full_player": self.reveal_full_player,
             }
         finally:
             await db.close()
@@ -114,21 +121,49 @@ class HummingGameStateMachine:
         state_data = await self.get_full_state()
         await manager.broadcast_state(state_data)
 
-    async def start_round(self, team_id: str, song_id: str) -> dict:
+    async def start_round(self, team_id: str, song_id: Optional[str] = None, game_version: int = 1) -> dict:
         if self.state != GameState.WAITING:
             raise ValueError(f"Cannot start round in state {self.state}")
 
         db = await get_db()
         try:
-            async with db.execute("SELECT * FROM songs WHERE id = ?", (song_id,)) as cursor:
-                song = await cursor.fetchone()
+            if game_version == 2:
+                # Find all songs assigned to this team in version 2
+                async with db.execute(
+                    "SELECT * FROM songs WHERE session_id = ? AND team_id = ? AND game_version = 2 ORDER BY question_number ASC",
+                    (self.session_id, team_id)
+                ) as cursor:
+                    rows = await cursor.fetchall()
+                
+                songs = [dict(r) for r in rows]
+                if len(songs) < 5:
+                    raise ValueError(f"Đội chơi chưa được gán đủ 5 bài hát cho Version 2 (Hiện có: {len(songs)})")
+                
+                # Mark all these songs as used
+                for song in songs:
+                    await db.execute("UPDATE songs SET is_used = 1 WHERE id = ?", (song["id"],))
+                
+                first_song = songs[0]
+                self.current_song_id = first_song["id"]
+                self.current_question_number = 1
+                self.game_version = 2
+                self.reveal_full_player = False
+                self.is_final_live = bool(first_song["is_final_live"])
+            else:
+                async with db.execute("SELECT * FROM songs WHERE id = ?", (song_id,)) as cursor:
+                    song = await cursor.fetchone()
 
-            if not song:
-                raise ValueError("Song not found")
-            if song["team_id"] and song["team_id"] != team_id:
-                raise ValueError("Bài hát không thuộc về đội thi đấu được chọn")
+                if not song:
+                    raise ValueError("Song not found")
+                if song["team_id"] and song["team_id"] != team_id:
+                    raise ValueError("Bài hát không thuộc về đội thi đấu được chọn")
 
-            await db.execute("UPDATE songs SET is_used = 1 WHERE id = ?", (song["id"],))
+                await db.execute("UPDATE songs SET is_used = 1 WHERE id = ?", (song["id"],))
+                self.current_song_id = song["id"]
+                self.current_question_number = 1
+                self.game_version = 1
+                self.reveal_full_player = False
+                self.is_final_live = bool(song["is_final_live"])
 
             async with db.execute(
                 "SELECT COUNT(*) as cnt FROM humming_rounds WHERE session_id = ? AND team_id = ?",
@@ -139,21 +174,19 @@ class HummingGameStateMachine:
 
             round_id = str(uuid.uuid4())
             await db.execute(
-                """INSERT INTO humming_rounds (id, session_id, team_id, song_id, round_number, state)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (round_id, self.session_id, team_id, song["id"], self.round_number, GameState.READY.value)
+                """INSERT INTO humming_rounds (id, session_id, team_id, song_id, round_number, state, game_version, current_question_number)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (round_id, self.session_id, team_id, self.current_song_id, self.round_number, GameState.READY.value, self.game_version, self.current_question_number)
             )
             await db.commit()
 
             self.current_team_id = team_id
-            self.current_song_id = song["id"]
             self.current_round_id = round_id
             self.state = GameState.READY
             main_game_state.active_game_mode = "HUMMING"
             self.hint_visible = True  # Always show Genre + Year hint from the beginning
             self.steal_active = False
             main_game_state.show_rules = False
-            self.is_final_live = bool(song["is_final_live"])
             self.is_media_playing = False
             self.timer_info = None
             self.main_answer_correct = None
@@ -172,7 +205,26 @@ class HummingGameStateMachine:
         """Start the guessing timer."""
         self.state = GameState.PLAYING
         self.is_media_playing = True
-        self.timer_info = TimerInfo(start_time=time.time(), duration=30, type="playing")
+        
+        duration = 30
+        if self.game_version == 2:
+            db = await get_db()
+            try:
+                async with db.execute("SELECT question_type FROM songs WHERE id = ?", (self.current_song_id,)) as cursor:
+                    row = await cursor.fetchone()
+                    if row:
+                        q_type = row["question_type"]
+                        if q_type == 'beat':
+                            duration = 10
+                        elif q_type == 'humming':
+                            duration = 15
+                        elif q_type == 'live':
+                            duration = 30
+                            self.is_media_playing = False # Live humming has no audio media
+            finally:
+                await db.close()
+
+        self.timer_info = TimerInfo(start_time=time.time(), duration=duration, type="playing")
         
         db = await get_db()
         try:
@@ -185,7 +237,7 @@ class HummingGameStateMachine:
 
         if self._timer_task:
             self._timer_task.cancel()
-        self._timer_task = asyncio.create_task(self._play_timer_callback(30))
+        self._timer_task = asyncio.create_task(self._play_timer_callback(duration))
 
     async def _play_timer_callback(self, duration: int):
         try:
@@ -204,7 +256,7 @@ class HummingGameStateMachine:
 
     async def time_up(self):
         if self.state == GameState.PLAYING:
-            # Media finished playing (30s). Auto transition to THINKING (20s)
+            # Media finished playing. Auto transition to THINKING (20s)
             self.state = GameState.THINKING
             self.is_media_playing = False
             self.timer_info = TimerInfo(start_time=time.time(), duration=20, type="thinking")
@@ -248,21 +300,51 @@ class HummingGameStateMachine:
             self.main_answer_correct = 1 if correct else 0
             await db.execute("UPDATE humming_rounds SET main_answer_correct = ? WHERE id = ?", (self.main_answer_correct, self.current_round_id))
             
-            if correct:
-                points = 20 if self.is_final_live else 10
-                await db.execute("UPDATE teams SET score = score + ? WHERE id = ?", (points, self.current_team_id))
-                await db.execute("UPDATE humming_rounds SET score_awarded = ?, score_to_team = ?, state = ? WHERE id = ?", (points, self.current_team_id, GameState.FINISHED.value, self.current_round_id))
-                await db.commit()
-                self.state = GameState.FINISHED
-                await self.broadcast_state()
-                await manager.broadcast_effect("correct", {"points": points, "team_id": self.current_team_id})
-                return {"correct": True, "points": points}
+            if self.game_version == 2:
+                if correct:
+                    points = 10
+                    await db.execute("UPDATE teams SET score = score + ? WHERE id = ?", (points, self.current_team_id))
+                    # If this is a beat question, reveal the full player
+                    async with db.execute("SELECT question_type FROM songs WHERE id = ?", (self.current_song_id,)) as cursor:
+                        row = await cursor.fetchone()
+                        if row and row["question_type"] == "beat":
+                            self.reveal_full_player = True
+                    
+                    await db.execute(
+                        "UPDATE humming_rounds SET score_awarded = score_awarded + ?, state = ? WHERE id = ?",
+                        (points, GameState.FINISHED.value, self.current_round_id)
+                    )
+                    await db.commit()
+                    self.state = GameState.FINISHED
+                    await self.broadcast_state()
+                    await manager.broadcast_effect("correct", {"points": points, "team_id": self.current_team_id})
+                    return {"correct": True, "points": points}
+                else:
+                    await db.execute(
+                        "UPDATE humming_rounds SET state = ? WHERE id = ?",
+                        (GameState.FINISHED.value, self.current_round_id)
+                    )
+                    await db.commit()
+                    self.state = GameState.FINISHED
+                    await self.broadcast_state()
+                    await manager.broadcast_effect("wrong")
+                    return {"correct": False, "points": 0}
             else:
-                # Wait for MC choice: activate Hope Star or decline it
-                await db.commit()
-                await self.broadcast_state()
-                await manager.broadcast_effect("wrong")
-                return {"correct": False, "points": 0}
+                if correct:
+                    points = 20 if self.is_final_live else 10
+                    await db.execute("UPDATE teams SET score = score + ? WHERE id = ?", (points, self.current_team_id))
+                    await db.execute("UPDATE humming_rounds SET score_awarded = ?, score_to_team = ?, state = ? WHERE id = ?", (points, self.current_team_id, GameState.FINISHED.value, self.current_round_id))
+                    await db.commit()
+                    self.state = GameState.FINISHED
+                    await self.broadcast_state()
+                    await manager.broadcast_effect("correct", {"points": points, "team_id": self.current_team_id})
+                    return {"correct": True, "points": points}
+                else:
+                    # Wait for MC choice: activate Hope Star or decline it
+                    await db.commit()
+                    await self.broadcast_state()
+                    await manager.broadcast_effect("wrong")
+                    return {"correct": False, "points": 0}
         finally:
             await db.close()
 
@@ -423,6 +505,9 @@ class HummingGameStateMachine:
         self.is_media_playing = False
         self.round_number = 0
         self.main_answer_correct = None
+        self.game_version = 1
+        self.current_question_number = 1
+        self.reveal_full_player = False
         await self.broadcast_state()
 
     async def set_session(self, session_id: str):
@@ -438,6 +523,9 @@ class HummingGameStateMachine:
         self.steal_active = False
         self.is_media_playing = False
         self.main_answer_correct = None
+        self.game_version = 1
+        self.current_question_number = 1
+        self.reveal_full_player = False
         if self._timer_task:
             self._timer_task.cancel()
             self._timer_task = None
@@ -471,6 +559,9 @@ class HummingGameStateMachine:
         self.is_media_playing = False
         self.selected_team_id = None
         self.main_answer_correct = None
+        self.game_version = 1
+        self.current_question_number = 1
+        self.reveal_full_player = False
 
         await self.broadcast_state()
 
@@ -486,6 +577,9 @@ class HummingGameStateMachine:
         self.is_media_playing = False
         self.selected_team_id = None
         self.main_answer_correct = None
+        self.game_version = 1
+        self.current_question_number = 1
+        self.reveal_full_player = False
 
         if self._timer_task:
             self._timer_task.cancel()
@@ -507,11 +601,57 @@ class HummingGameStateMachine:
         self.is_media_playing = False
         self.selected_team_id = None
         self.main_answer_correct = None
+        self.game_version = 1
+        self.current_question_number = 1
+        self.reveal_full_player = False
 
         if self._timer_task:
             self._timer_task.cancel()
             self._timer_task = None
 
         await self.broadcast_state()
+
+    async def next_question(self):
+        if self.game_version != 2 or self.state != GameState.FINISHED:
+            raise ValueError("Chỉ có thể chuyển câu hỏi ở chế độ Version 2 và trạng thái FINISHED")
+        
+        if self.current_question_number >= 5:
+            raise ValueError("Đã hoàn thành câu hỏi cuối cùng")
+            
+        next_q = self.current_question_number + 1
+        db = await get_db()
+        try:
+            # Find the song for this team and next question number
+            async with db.execute(
+                "SELECT id, is_final_live FROM songs WHERE session_id = ? AND team_id = ? AND game_version = 2 AND question_number = ?",
+                (self.session_id, self.current_team_id, next_q)
+            ) as cursor:
+                row = await cursor.fetchone()
+                
+            if not row:
+                raise ValueError(f"Không tìm thấy câu hỏi số {next_q} cho đội này")
+                
+            next_song_id = row["id"]
+            is_final_live = bool(row["is_final_live"])
+            
+            # Update round in database
+            await db.execute(
+                "UPDATE humming_rounds SET song_id = ?, current_question_number = ?, state = ? WHERE id = ?",
+                (next_song_id, next_q, GameState.READY.value, self.current_round_id)
+            )
+            await db.commit()
+            
+            self.current_song_id = next_song_id
+            self.current_question_number = next_q
+            self.state = GameState.READY
+            self.reveal_full_player = False
+            self.is_media_playing = False
+            self.is_final_live = is_final_live
+            self.timer_info = None
+            self.main_answer_correct = None
+            
+            await self.broadcast_state()
+        finally:
+            await db.close()
 
 humming_game = HummingGameStateMachine()

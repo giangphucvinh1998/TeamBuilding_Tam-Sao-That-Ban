@@ -33,6 +33,14 @@ export default function AdminPage() {
     }
   };
 
+  const toggleSpeech = async () => {
+    try {
+      await api.post('/game/toggle-speech', {});
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // Simple auth check - just checking if we arrived here, we assume PIN was ok
   // In a real app we'd use a token or context
   useEffect(() => {
@@ -90,6 +98,13 @@ export default function AdminPage() {
               title="Bật/Tắt hiển thị bảng điểm tổng sắp trên máy chiếu"
             >
               📊 {gameState?.show_scoreboard ? 'ĐANG HIỂN THỊ ĐIỂM' : 'HIỂN THỊ ĐIỂM'}
+            </button>
+            <button 
+              onClick={toggleSpeech}
+              className={`ml-2 px-4 py-1.5 rounded-full text-xs font-bold shadow-sm transition-all border-2 ${gameState?.show_speech ? 'bg-indigo-50 text-indigo-600 border-indigo-500 animate-pulse' : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100'}`}
+              title="Bật/Tắt hiển thị ảnh phát biểu toàn màn hình trên máy chiếu"
+            >
+              🎤 {gameState?.show_speech ? 'ĐANG CHIẾU PHÁT BIỂU' : 'CHIẾU PHÁT BIỂU'}
             </button>
           </div>
           

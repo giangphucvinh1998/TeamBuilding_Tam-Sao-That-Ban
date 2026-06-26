@@ -136,6 +136,9 @@ class SongCreate(BaseModel):
     singer: str = ""
     is_final_live: bool = False
     team_id: Optional[str] = None
+    game_version: int = 1
+    question_number: int = 0
+    question_type: str = "humming"
 
 class SongUpdate(BaseModel):
     title: Optional[str] = None
@@ -146,6 +149,9 @@ class SongUpdate(BaseModel):
     is_final_live: Optional[bool] = None
     is_used: Optional[bool] = None
     team_id: Optional[str] = None
+    game_version: Optional[int] = None
+    question_number: Optional[int] = None
+    question_type: Optional[str] = None
 
 class SongResponse(BaseModel):
     id: str
@@ -158,6 +164,9 @@ class SongResponse(BaseModel):
     is_used: bool
     is_final_live: bool
     team_id: Optional[str] = None
+    game_version: int
+    question_number: int
+    question_type: str
 
 
 # --- Matrix Game ---
@@ -196,4 +205,8 @@ class GameStateResponse(BaseModel):
     show_intro: bool = False
     show_rules: bool = False
     show_scoreboard: bool = False
+    show_speech: bool = False
     selected_team_id: Optional[str] = None
+    game_version: Optional[int] = None
+    current_question_number: Optional[int] = None
+    reveal_full_player: Optional[bool] = None

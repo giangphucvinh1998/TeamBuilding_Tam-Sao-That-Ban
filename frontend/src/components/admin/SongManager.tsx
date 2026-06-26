@@ -12,6 +12,9 @@ interface Song {
   is_used: boolean;
   is_final_live: boolean;
   team_id?: string;
+  game_version: number;
+  question_number: number;
+  question_type: string;
 }
 
 export default function SongManager({ sessionId }: { sessionId: string }) {
@@ -27,6 +30,10 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputCsvRef = useRef<HTMLInputElement>(null);
+
+  const [gameVersion, setGameVersion] = useState<number>(1);
+  const [questionNumber, setQuestionNumber] = useState<number>(0);
+  const [questionType, setQuestionType] = useState<string>('humming');
 
   const [editingSongId, setEditingSongId] = useState<string | null>(null);
   const [currentOriginalFilename, setCurrentOriginalFilename] = useState<string>('');
@@ -63,6 +70,9 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
     setSelectedTeamId(song.team_id || '');
     setCurrentOriginalFilename(song.original_filename || (song.media_url ? song.media_url.split('/').pop() || '' : ''));
     setFile(null); // Clear file input since we don't require re-uploading
+    setGameVersion(song.game_version || 1);
+    setQuestionNumber(song.question_number || 0);
+    setQuestionType(song.question_type || 'humming');
     if (fileInputRef.current) fileInputRef.current.value = '';
     // Scroll to top where the form is
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -77,6 +87,9 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
     setSelectedTeamId('');
     setCurrentOriginalFilename('');
     setFile(null);
+    setGameVersion(1);
+    setQuestionNumber(0);
+    setQuestionType('humming');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -103,7 +116,10 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
           hint: newHint,
           singer: newSinger,
           is_final_live: isFinalLive,
-          team_id: selectedTeamId || null
+          team_id: selectedTeamId || null,
+          game_version: gameVersion,
+          question_number: questionNumber,
+          question_type: questionType
         };
         if (mediaUrl) {
            payload.media_url = mediaUrl;
@@ -121,7 +137,10 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
           hint: newHint,
           singer: newSinger,
           is_final_live: isFinalLive,
-          team_id: selectedTeamId || null
+          team_id: selectedTeamId || null,
+          game_version: gameVersion,
+          question_number: questionNumber,
+          question_type: questionType
         });
         setNewTitle('');
         setNewHint('');
@@ -130,6 +149,9 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
         setCurrentOriginalFilename('');
         setIsFinalLive(false);
         setSelectedTeamId('');
+        setGameVersion(1);
+        setQuestionNumber(0);
+        setQuestionType('humming');
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
 
@@ -301,6 +323,68 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
               onChange={e => setNewSinger(e.target.value)}
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Phiên bản trò chơi</label>
+            <select
+              className="w-full border rounded px-3 py-2"
+              value={gameVersion}
+              onChange={e => {
+                const val = Number(e.target.value);
+                setGameVersion(val);
+                if (val === 1) {
+                  setQuestionNumber(0);
+                  setQuestionType('humming');
+                } else {
+                  setQuestionNumber(1);
+                  setQuestionType('beat');
+                }
+              }}
+            >
+              <option value="1">Version 1 (Luật cũ - 1 câu/lượt)</option>
+              <option value="2">Version 2 (Luật mới - 5 câu/lượt)</option>
+            </select>
+          </div>
+          
+          {gameVersion === 2 && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">Câu số (1 -{'>'} 5)</label>
+                <select
+                  className="w-full border rounded px-3 py-2"
+                  value={questionNumber}
+                  onChange={e => setQuestionNumber(Number(e.target.value))}
+                >
+                  <option value="1">Câu 1</option>
+                  <option value="2">Câu 2</option>
+                  <option value="3">Câu 3</option>
+                  <option value="4">Câu 4</option>
+                  <option value="5">Câu 5 (Live)</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-1">Loại câu hỏi</label>
+                <select
+                  className="w-full border rounded px-3 py-2"
+                  value={questionType}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setQuestionType(val);
+                    if (val === 'live') {
+                      setIsFinalLive(true);
+                    } else {
+                      setIsFinalLive(false);
+                    }
+                  }}
+                >
+                  <option value="beat">Phát Beat 10s (Q1-Q3)</option>
+                  <option value="humming">Phát Ngân Nga 15s (Q4)</option>
+                  <option value="live">Ngân Nga Trực Tiếp (Q5)</option>
+                </select>
+              </div>
+            </>
+          )}
+
           <div className="md:col-span-2 flex items-center gap-2">
             <input 
               type="checkbox" 
@@ -308,6 +392,7 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
               checked={isFinalLive}
               onChange={e => setIsFinalLive(e.target.checked)}
               className="w-4 h-4"
+              disabled={questionType === 'live' && gameVersion === 2}
             />
             <label htmlFor="is_final" className="text-sm font-bold text-purple-700">Đây là Bài hát Live Cuối cùng (Không cần Media, +20 điểm)</label>
           </div>
@@ -350,11 +435,22 @@ export default function SongManager({ sessionId }: { sessionId: string }) {
                 <td className="p-3 text-gray-600">{song.hint}</td>
                 <td className="p-3 text-gray-600">{song.singer}</td>
                 <td className="p-3">
-                  {song.is_final_live ? (
-                    <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded font-bold">LIVE CUỐI</span>
-                  ) : (
-                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">MEDIA</span>
-                  )}
+                  <div className="flex flex-col gap-1">
+                    {song.game_version === 2 ? (
+                      <span className="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded font-bold self-start">
+                        V2 - Câu {song.question_number} ({song.question_type ? song.question_type.toUpperCase() : 'HUMMING'})
+                      </span>
+                    ) : (
+                      <span className="bg-teal-100 text-teal-800 text-xs px-2 py-0.5 rounded font-semibold self-start">
+                        V1
+                      </span>
+                    )}
+                    {song.is_final_live ? (
+                      <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded font-bold self-start">LIVE</span>
+                    ) : (
+                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded self-start">MEDIA</span>
+                    )}
+                  </div>
                 </td>
                 <td className="p-3">
                   {song.is_used ? (

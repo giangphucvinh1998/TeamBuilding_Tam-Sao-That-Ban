@@ -61,7 +61,10 @@ CREATE TABLE IF NOT EXISTS songs (
     hint TEXT DEFAULT '',
     singer TEXT DEFAULT '',
     is_used INTEGER NOT NULL DEFAULT 0,
-    is_final_live INTEGER NOT NULL DEFAULT 0
+    is_final_live INTEGER NOT NULL DEFAULT 0,
+    game_version INTEGER NOT NULL DEFAULT 1,
+    question_number INTEGER NOT NULL DEFAULT 0,
+    question_type TEXT NOT NULL DEFAULT 'humming'
 );
 CREATE TABLE IF NOT EXISTS humming_rounds (
     id TEXT PRIMARY KEY,
@@ -77,7 +80,9 @@ CREATE TABLE IF NOT EXISTS humming_rounds (
     score_awarded INTEGER NOT NULL DEFAULT 0,
     score_to_team TEXT,
     started_at TIMESTAMP,
-    finished_at TIMESTAMP
+    finished_at TIMESTAMP,
+    game_version INTEGER NOT NULL DEFAULT 1,
+    current_question_number INTEGER NOT NULL DEFAULT 1
 );
 """
 
@@ -120,6 +125,36 @@ async def init_db():
             await db.execute("ALTER TABLE songs ADD COLUMN singer TEXT DEFAULT '';")
         except aiosqlite.OperationalError:
             pass # Column likely already exists
+
+        # Safe migration for game_version in songs
+        try:
+            await db.execute("ALTER TABLE songs ADD COLUMN game_version INTEGER DEFAULT 1;")
+        except aiosqlite.OperationalError:
+            pass
+
+        # Safe migration for question_number in songs
+        try:
+            await db.execute("ALTER TABLE songs ADD COLUMN question_number INTEGER DEFAULT 0;")
+        except aiosqlite.OperationalError:
+            pass
+
+        # Safe migration for question_type in songs
+        try:
+            await db.execute("ALTER TABLE songs ADD COLUMN question_type TEXT DEFAULT 'humming';")
+        except aiosqlite.OperationalError:
+            pass
+
+        # Safe migration for game_version in humming_rounds
+        try:
+            await db.execute("ALTER TABLE humming_rounds ADD COLUMN game_version INTEGER DEFAULT 1;")
+        except aiosqlite.OperationalError:
+            pass
+
+        # Safe migration for current_question_number in humming_rounds
+        try:
+            await db.execute("ALTER TABLE humming_rounds ADD COLUMN current_question_number INTEGER DEFAULT 1;")
+        except aiosqlite.OperationalError:
+            pass
             
         await db.commit()
     finally:

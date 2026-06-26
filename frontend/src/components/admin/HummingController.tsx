@@ -8,6 +8,7 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
   const [songs, setSongs] = useState<any[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [selectedSong, setSelectedSong] = useState<string>('');
+  const [selectedGameVersion, setSelectedGameVersion] = useState<number>(1);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -37,13 +38,16 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
   };
 
   const handleStartRound = async () => {
-    if (!selectedTeam || !selectedSong) return alert("Chọn đội và bài hát trước!");
+    if (!selectedTeam) return alert("Chọn đội trước!");
+    if (selectedGameVersion === 1 && !selectedSong) return alert("Chọn bài hát trước!");
+    
     setLoading(true);
     try {
       await api.post('/humming/start-round', {
         session_id: sessionId,
         team_id: selectedTeam,
-        song_id: selectedSong
+        song_id: selectedGameVersion === 1 ? selectedSong : null,
+        game_version: selectedGameVersion
       });
       fetchSongs();
       setSelectedSong('');
@@ -155,53 +159,91 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
                 ))}
               </select>
             </div>
+
+            <div>
+              <h3 className="text-lg font-bold mb-2">2. Chọn phiên bản chơi</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSelectedGameVersion(1)}
+                  className={`flex-1 py-3 font-bold rounded-lg border text-sm transition-all shadow-sm ${
+                    selectedGameVersion === 1
+                      ? 'bg-blue-600 border-blue-500 text-white shadow'
+                      : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300'
+                  }`}
+                >
+                  V1 (Luật Cũ)
+                </button>
+                <button
+                  onClick={() => setSelectedGameVersion(2)}
+                  className={`flex-1 py-3 font-bold rounded-lg border text-sm transition-all shadow-sm ${
+                    selectedGameVersion === 2
+                      ? 'bg-blue-600 border-blue-500 text-white shadow'
+                      : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300'
+                  }`}
+                >
+                  V2 (Luật Mới)
+                </button>
+              </div>
+            </div>
             
             <button 
               className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-lg text-xl shadow-lg disabled:opacity-50 transition-all transform hover:scale-[1.02]"
               onClick={handleStartRound}
-              disabled={loading || !selectedTeam || !selectedSong}
+              disabled={loading || !selectedTeam || (selectedGameVersion === 1 && !selectedSong)}
             >
               BẮT ĐẦU LƯỢT MỚI
             </button>
-            {(!selectedTeam || !selectedSong) && (
-              <p className="text-center text-red-500 font-medium">Vui lòng chọn cả Đội và Bài hát để bắt đầu.</p>
+            {(!selectedTeam || (selectedGameVersion === 1 && !selectedSong)) && (
+              <p className="text-center text-red-500 font-medium">Vui lòng chọn đầy đủ thông tin để bắt đầu.</p>
             )}
           </div>
 
           {/* Songs Column */}
           <div className="border rounded-lg p-4 bg-gray-50 flex flex-col max-h-[500px]">
-            <h3 className="text-lg font-bold mb-2 text-blue-800">2. Chọn Bài Hát</h3>
-            <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 gap-2 flex items-center justify-center">
-              {!selectedTeam ? (
-                <div className="text-center py-8 text-gray-500 font-medium text-sm">
-                  👈 Vui lòng chọn Đội thi đấu trước để chọn bài hát tương ứng.
-                </div>
-              ) : filteredSongs.length === 0 ? (
-                <div className="text-center py-8 text-red-500 font-semibold text-sm">
-                  Không có bài hát nào được gán cho đội này. Vui lòng vào mục Quản lý bài hát để thêm hoặc import CSV!
-                </div>
-              ) : (
-                filteredSongs.map((s: any, index: number) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setSelectedSong(s.id)}
-                    className={`text-left p-3 rounded border flex items-center justify-between transition-colors w-full
-                      ${selectedSong === s.id ? 'bg-blue-100 border-blue-500 shadow-sm' 
-                        : s.is_used ? 'bg-gray-200 text-gray-500 opacity-60' 
-                        : 'bg-white hover:bg-blue-50 border-gray-200'}`}
-                  >
-                    <div className="font-bold flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs">{index + 1}</span>
-                      <span className="truncate max-w-[200px]">{s.title}</span>
+            {selectedGameVersion === 2 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 bg-white rounded-lg border-2 border-dashed border-gray-200">
+                <span className="text-4xl mb-4">📋</span>
+                <h4 className="text-base font-bold text-gray-700">Chế độ chơi Version 2</h4>
+                <p className="text-xs text-gray-500 mt-2 max-w-[280px]">
+                  Hệ thống tự động nạp chuỗi 5 bài hát/câu hỏi được cấu hình riêng cho đội chơi này. Không cần chọn bài hát thủ công.
+                </p>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-lg font-bold mb-2 text-blue-800">3. Chọn Bài Hát</h3>
+                <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 gap-2">
+                  {!selectedTeam ? (
+                    <div className="text-center py-8 text-gray-500 font-medium text-sm">
+                      👈 Vui lòng chọn Đội thi đấu trước để chọn bài hát tương ứng.
                     </div>
-                    <div className="flex items-center gap-2">
-                      {s.is_final_live && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded font-bold">LIVE CUỐI</span>}
-                      {s.is_used && <span className="text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded font-bold">Đã Dùng</span>}
+                  ) : filteredSongs.length === 0 ? (
+                    <div className="text-center py-8 text-red-500 font-semibold text-sm">
+                      Không có bài hát nào được gán cho đội này. Vui lòng vào mục Quản lý bài hát để thêm hoặc import CSV!
                     </div>
-                  </button>
-                ))
-              )}
-            </div>
+                  ) : (
+                    filteredSongs.map((s: any, index: number) => (
+                      <button
+                        key={s.id}
+                        onClick={() => setSelectedSong(s.id)}
+                        className={`text-left p-3 rounded border flex items-center justify-between transition-colors w-full
+                          ${selectedSong === s.id ? 'bg-blue-100 border-blue-500 shadow-sm' 
+                            : s.is_used ? 'bg-gray-200 text-gray-500 opacity-60' 
+                            : 'bg-white hover:bg-blue-50 border-gray-200'}`}
+                      >
+                        <div className="font-bold flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs">{index + 1}</span>
+                          <span className="truncate max-w-[200px]">{s.title}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {s.is_final_live && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded font-bold">LIVE CUỐI</span>}
+                          {s.is_used && <span className="text-xs bg-gray-300 text-gray-700 px-2 py-1 rounded font-bold">Đã Dùng</span>}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -209,14 +251,27 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
       {state !== 'WAITING' && current_team && (
         <div className="space-y-6">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <div className="flex justify-between mb-2">
+            <div className="flex justify-between items-center mb-2">
               <div className="text-xl">Đội đang thi: <strong className="text-blue-700">{current_team.name}</strong></div>
+              {gameState.game_version === 2 && (
+                <div className="bg-amber-100 text-amber-800 font-bold px-3 py-1 rounded border border-amber-300">
+                  Câu hỏi: {gameState.current_question_number} / 5
+                </div>
+              )}
             </div>
             
             <div className="mt-4 p-4 bg-white rounded border-2 border-dashed border-gray-300">
-              <div className="text-sm text-gray-500 uppercase font-bold mb-1">Bài Hát / Đáp Án (Bảo mật)</div>
+              <div className="text-sm text-gray-500 uppercase font-bold mb-1">
+                {gameState.game_version === 2 ? `Loại câu hỏi: ${current_song?.question_type?.toUpperCase()}` : 'Bài Hát / Đáp Án (Bảo mật)'}
+              </div>
               <div className="text-3xl font-black text-center text-blue-600 my-4">{current_song?.title}</div>
-              {is_final_live && <div className="text-center text-lg text-purple-600 font-bold mb-2">LƯỢT LIVE CUỐI (+20 Điểm)</div>}
+              {gameState.game_version === 2 ? (
+                <div className="text-center font-bold text-sm text-amber-600 mb-2">
+                  [Version 2 - {current_song?.question_type === 'beat' ? 'Phát Beat 10s' : current_song?.question_type === 'humming' ? 'Phát Ngân Nga 15s' : 'Ngân Nga Trực Tiếp'}]
+                </div>
+              ) : (
+                is_final_live && <div className="text-center text-lg text-purple-600 font-bold mb-2">LƯỢT LIVE CUỐI (+20 Điểm)</div>
+              )}
               {current_song?.hint && <div className="text-lg text-blue-600 mt-2"><strong>Gợi ý:</strong> {current_song.hint}</div>}
             </div>
           </div>
@@ -228,7 +283,13 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
                   onClick={handleStartTimer}
                   className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg font-black text-xl shadow-lg transition-transform active:scale-95"
                 >
-                  {is_final_live ? '⏱ BẮT ĐẦU LƯỢT LIVE (30s)' : '▶ PHÁT NHẠC & TÍNH GIỜ (30s)'}
+                  {gameState.game_version === 2 ? (
+                    current_song?.question_type === 'beat' ? '⏱ BẮT ĐẦU CHƠI BEAT (10s)' :
+                    current_song?.question_type === 'humming' ? '▶ PHÁT NGÂN NGA (15s)' :
+                    '🎤 LƯỢT NGÂN NGA TRỰC TIẾP (BẮT ĐẦU)'
+                  ) : (
+                    is_final_live ? '⏱ BẮT ĐẦU LƯỢT LIVE (30s)' : '▶ PHÁT NHẠC & TÍNH GIỜ (30s)'
+                  )}
                 </button>
               </div>
             )}
@@ -236,9 +297,15 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
             {state === 'PLAYING' && (
               <div className="space-y-4">
                 <div className="text-center py-4 bg-green-100 text-green-800 rounded-lg text-xl font-bold animate-pulse">
-                  Đang phát nhạc ngân nga (30s)...
+                  {gameState.game_version === 2 ? (
+                    current_song?.question_type === 'beat' ? 'Đang nghe Beat (10s)...' :
+                    current_song?.question_type === 'humming' ? 'Đang nghe nhạc ngân nga (15s)...' :
+                    'Đang đếm thời gian ngân nga trực tiếp (30s)...'
+                  ) : (
+                    'Đang phát nhạc ngân nga (30s)...'
+                  )}
                 </div>
-                {!is_final_live && (
+                {!is_final_live && current_song?.question_type !== 'live' && (
                   <button 
                     onClick={() => handlePlayPause(!is_media_playing)}
                     className={`w-full py-4 rounded-lg font-bold text-xl text-white shadow-lg transition-transform active:scale-95 ${is_media_playing ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-500 hover:bg-green-600'}`}
@@ -271,25 +338,7 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
 
             {state === 'ANSWER_CONFIRM' && (
               <div className="space-y-4">
-                {gameState.main_answer_correct === 0 ? (
-                  <div className="space-y-4 bg-orange-50 p-4 rounded-lg border border-orange-200">
-                    <div className="text-center text-lg font-bold text-red-700 uppercase">Đội thi trả lời SAI câu gốc. Lựa chọn tiếp theo:</div>
-                    <div className="flex gap-4">
-                      <button 
-                        className="flex-1 py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-lg shadow-md transition-transform active:scale-95"
-                        onClick={async () => await api.post('/humming/activate-hope-star')}
-                      >
-                        🌟 Dùng Ngôi sao hy vọng
-                      </button>
-                      <button 
-                        className="flex-1 py-4 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg text-lg shadow-md transition-transform active:scale-95"
-                        onClick={async () => await api.post('/humming/decline-hope-star')}
-                      >
-                        ❌ Không dùng (-5đ & Cho cướp)
-                      </button>
-                    </div>
-                  </div>
-                ) : (
+                {gameState.game_version === 2 ? (
                   <div className="space-y-4">
                     <h3 className="text-xl font-bold text-center">Xác nhận đáp án chính:</h3>
                     <div className="flex gap-4">
@@ -297,7 +346,7 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
                         className="flex-1 py-6 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-2xl shadow-lg transition-transform active:scale-95"
                         onClick={() => handleConfirm(true)}
                       >
-                        ĐÚNG ({is_final_live ? '+20' : '+10'} điểm)
+                        ĐÚNG (+10 điểm)
                       </button>
                       <button 
                         className="flex-1 py-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-2xl shadow-lg transition-transform active:scale-95"
@@ -307,6 +356,44 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
                       </button>
                     </div>
                   </div>
+                ) : (
+                  gameState.main_answer_correct === 0 ? (
+                    <div className="space-y-4 bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      <div className="text-center text-lg font-bold text-red-700 uppercase">Đội thi trả lời SAI câu gốc. Lựa chọn tiếp theo:</div>
+                      <div className="flex gap-4">
+                        <button 
+                          className="flex-1 py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-lg shadow-md transition-transform active:scale-95"
+                          onClick={async () => await api.post('/humming/activate-hope-star')}
+                        >
+                          🌟 Dùng Ngôi sao hy vọng
+                        </button>
+                        <button 
+                          className="flex-1 py-4 bg-gray-600 hover:bg-gray-700 text-white font-bold rounded-lg text-lg shadow-md transition-transform active:scale-95"
+                          onClick={async () => await api.post('/humming/decline-hope-star')}
+                        >
+                          ❌ Không dùng (-5đ & Cho cướp)
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-bold text-center">Xác nhận đáp án chính:</h3>
+                      <div className="flex gap-4">
+                        <button 
+                          className="flex-1 py-6 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg text-2xl shadow-lg transition-transform active:scale-95"
+                          onClick={() => handleConfirm(true)}
+                        >
+                          ĐÚNG ({is_final_live ? '+20' : '+10'} điểm)
+                        </button>
+                        <button 
+                          className="flex-1 py-6 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-2xl shadow-lg transition-transform active:scale-95"
+                          onClick={() => handleConfirm(false)}
+                        >
+                          SAI
+                        </button>
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
             )}
@@ -390,11 +477,41 @@ export default function HummingController({ sessionId, gameState }: { sessionId:
             {state === 'FINISHED' && (
               <div className="text-center space-y-4">
                 <div className="py-6 bg-green-100 text-green-800 rounded-lg text-2xl font-bold uppercase border-2 border-green-400">
-                  KẾT THÚC LƯỢT CHƠI
+                  {gameState.game_version === 2 ? `CÂU HỎI ${gameState.current_question_number} HOÀN THÀNH` : 'KẾT THÚC LƯỢT CHƠI'}
                 </div>
-                <button className="w-full py-4 bg-gray-800 hover:bg-black text-white font-bold rounded-lg text-xl shadow-lg" onClick={handleEndRound}>
-                  TIẾP TỤC
-                </button>
+                
+                {gameState.game_version === 2 && gameState.reveal_full_player && (
+                  <div className="bg-amber-50 p-6 rounded-xl border border-amber-300 space-y-4 shadow-sm mb-4">
+                    <div className="text-lg font-black text-amber-800 uppercase tracking-wider">Bộ điều khiển phát Full Beat</div>
+                    <div className="flex justify-center gap-4">
+                      <button 
+                        onClick={() => handlePlayPause(true)}
+                        className="px-8 py-3 bg-green-600 hover:bg-green-700 active:scale-95 text-white font-bold rounded-lg shadow-md transition-all flex items-center gap-2"
+                      >
+                        ▶ PHÁT FULL BEAT
+                      </button>
+                      <button 
+                        onClick={() => handlePlayPause(false)}
+                        className="px-8 py-3 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-bold rounded-lg shadow-md transition-all flex items-center gap-2"
+                      >
+                        ⏸ TẠM DỪNG BEAT
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {gameState.game_version === 2 && gameState.current_question_number < 5 ? (
+                  <button 
+                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-xl shadow-lg transition-all animate-bounce" 
+                    onClick={async () => await api.post('/humming/next-question')}
+                  >
+                    👉 CÂU TIẾP THEO ({gameState.current_question_number + 1} / 5)
+                  </button>
+                ) : (
+                  <button className="w-full py-4 bg-gray-800 hover:bg-black text-white font-bold rounded-lg text-xl shadow-lg" onClick={handleEndRound}>
+                    KẾT THÚC VÒNG CHƠI (TIẾP TỤC)
+                  </button>
+                )}
               </div>
             )}
           </div>
